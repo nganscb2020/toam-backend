@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị — Tổ Ấm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2F1EC; --surface:#FFFFFF; --ink:#232323; --ink-soft:#6E6E6E;
+    --primary:#C1272D; --primary-dark:#921E23; --accent:#F0A202; --brick:#921E23;
+    --line:#E7E4DB; --line-strong:#D8D2C2;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg); color: var(--ink);
+    font-family:'Be Vietnam Pro', sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3{ font-family:'Fraunces', serif; font-weight:600; color: var(--primary-dark); }
+  .wrap{ max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 24px; border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  header .logo{ font-family:'Fraunces', serif; font-weight:600; font-size:1.2rem; color: var(--primary-dark); }
+  header .tag{ font-size:0.8rem; color: var(--ink-soft); }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    padding: 10px 20px; border-radius: 999px; font-size:0.9rem; font-weight:600;
+    border:1px solid transparent; cursor:pointer; transition: background .15s ease;
+  }
+  .btn-primary{ background: var(--primary); color:#fff; }
+  .btn-primary:hover{ background: var(--primary-dark); }
+  .btn-ghost{ background: transparent; color: var(--primary-dark); border-color: var(--line-strong); }
+  .btn-ghost:hover{ border-color: var(--primary-dark); }
+  .btn-danger{ background: transparent; color: var(--brick); border-color:#E3C3B8; }
+  .btn-block{ width:100%; }
+  .btn-sm{ padding: 7px 14px; font-size:0.82rem; }
+
+  /* login card */
+  .login-wrap{
+    min-height: 80vh; display:flex; align-items:center; justify-content:center;
+  }
+  .login-card{
+    background: var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding: 36px; width: 100%; max-width: 400px;
+  }
+  .login-card h2{ font-size:1.4rem; margin-bottom:6px; }
+  .login-card .sub{ color: var(--ink-soft); font-size:0.88rem; margin-bottom:22px; }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:0.85rem; font-weight:600; margin-bottom:6px; }
+  .field input, .field select, .field textarea{
+    width:100%; padding:11px 13px; border:1px solid var(--line-strong); border-radius:6px;
+    font-family:inherit; font-size:0.92rem; background:#FCFAF5; color: var(--ink);
+  }
+  .field textarea{ resize:vertical; min-height:80px; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field-row-3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+  .check-row{ display:flex; flex-wrap:wrap; gap: 14px 22px; padding: 4px 0; }
+  .check-item{ display:flex; align-items:center; gap:7px; font-size:0.86rem; font-weight:500; color: var(--ink); cursor:pointer; }
+  .check-item input{ width:16px; height:16px; accent-color: var(--primary); cursor:pointer; }
+  .vip-field{ background:#FBF3E3; border:1px solid #F0D89A; border-radius:8px; padding:12px 14px; }
+  .vip-check{ align-items:flex-start; }
+  .vip-check input{ margin-top:2px; accent-color: var(--accent); }
+  .vip-check span{ font-size:0.86rem; line-height:1.4; color: var(--ink); }
+
+  .form-msg{ font-size:0.85rem; padding:10px 12px; border-radius:6px; margin-bottom:14px; display:none; }
+  .form-msg.error{ display:block; background:#FBEAE5; color: var(--brick); }
+  .form-msg.success{ display:block; background:#E7EFE9; color: var(--primary-dark); }
+
+  .toggle-link{ margin-top:16px; text-align:center; font-size:0.85rem; color: var(--ink-soft); }
+  .toggle-link button{ background:none; border:none; color: var(--primary); font-weight:600; padding:0; cursor:pointer; }
+
+  /* dashboard */
+  .dash-head{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:14px;
+  }
+  .dash-head h1{ font-size:1.7rem; }
+  .dash-head p{ color: var(--ink-soft); font-size:0.92rem; margin-top:4px; }
+
+  .listing-table{
+    background: var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden;
+  }
+  .lt-row{
+    display:grid; grid-template-columns: 72px 1.6fr 1fr 0.8fr auto; gap:14px; align-items:center;
+    padding: 14px 18px; border-bottom:1px solid var(--line);
+  }
+  .lt-row:last-child{ border-bottom:none; }
+  .lt-row.head{ background:#F3EEE1; font-size:0.78rem; font-weight:700; color: var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; }
+  .lt-thumb{ width:56px; height:56px; border-radius:6px; overflow:hidden; background:#eee; }
+  .lt-thumb img{ width:100%; height:100%; object-fit:cover; }
+  .lt-title{ font-weight:600; font-size:0.92rem; }
+  .lt-addr{ font-size:0.8rem; color: var(--ink-soft); margin-top:2px; }
+  .lt-price{ font-family:'Fraunces', serif; color: var(--primary-dark); }
+  .lt-type{ font-size:0.78rem; font-weight:700; padding:4px 10px; border-radius:999px; display:inline-block; color:#fff; }
+  .lt-type.sale{ background: var(--primary); }
+  .lt-type.rent{ background: var(--brick); }
+  .lt-actions{ display:flex; gap:8px; }
+
+  .empty-state{ text-align:center; padding:60px 20px; color: var(--ink-soft); }
+
+  .cat-filter-row{ display:flex; gap:8px; margin: 14px 0 16px; flex-wrap:wrap; }
+  .chip-filter{
+    padding: 8px 16px; border-radius:999px; border:1px solid var(--line-strong);
+    background: var(--surface); color: var(--ink-soft); font-size:0.84rem; font-weight:600;
+  }
+  .chip-filter.active{ background: var(--primary); color:#fff; border-color: var(--primary); }
+
+  /* modal for post/edit */
+  .overlay{
+    position:fixed; inset:0; background:rgba(28,43,40,0.55);
+    display:none; align-items:center; justify-content:center; padding:24px; z-index:200;
+  }
+  .overlay.open{ display:flex; }
+  .modal{
+    background: var(--surface); border-radius:10px; width:100%; max-width:620px;
+    max-height:88vh; overflow-y:auto; padding:32px; position:relative;
+  }
+  .modal-close{
+    position:absolute; top:16px; right:16px; background:none; border:none;
+    font-size:1.4rem; line-height:1; color: var(--ink-soft); cursor:pointer;
+  }
+  .modal h3{ font-size:1.3rem; margin-bottom:6px; }
+
+  .media-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:6px; }
+  .media-item{ position:relative; aspect-ratio:1; border-radius:6px; overflow:hidden; background:#eee; border:1px solid var(--line); }
+  .media-item img, .media-item video{ width:100%; height:100%; object-fit:cover; }
+  .media-item .video-badge{
+    position:absolute; bottom:4px; left:4px; background:rgba(0,0,0,0.65); color:#fff;
+    font-size:0.65rem; font-weight:700; padding:2px 6px; border-radius:4px;
+  }
+  .media-item .remove-media{
+    position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%;
+    background: var(--brick); color:#fff; border:none; font-size:0.9rem; line-height:1;
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .media-item .remove-media:hover{ background: var(--primary-dark); }
+  .modal .sub{ color: var(--ink-soft); font-size:0.88rem; margin-bottom:20px; }
+
+  .toast{
+    position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+    background: var(--primary-dark); color:#fff; padding:13px 22px; border-radius:999px;
+    font-size:0.88rem; z-index:300; opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(-6px); }
+
+  @media (max-width: 700px){
+    .field-row, .field-row-3{ grid-template-columns:1fr; }
+    .lt-row{ grid-template-columns: 56px 1fr; grid-template-rows:auto auto; }
+    .lt-row.head{ display:none; }
+    .lt-price, .lt-type, .lt-actions{ grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Tổ Ấm — Quản trị</div>
+  <div id="headerRight"></div>
+</header>
+
+<!-- ===== Đăng nhập ===== -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h2 id="authTitle">Đăng nhập quản trị</h2>
+    <p class="sub" id="authSub">Đăng nhập để quản lý tin đăng trên website.</p>
+    <div class="form-msg" id="authMsg"></div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="loginEmail">Email</label>
+        <input type="email" id="loginEmail" required>
+      </div>
+      <div class="field">
+        <label for="loginPassword">Mật khẩu</label>
+        <input type="password" id="loginPassword" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Đăng nhập</button>
+    </form>
+
+    <form id="registerForm" style="display:none;">
+      <div class="field">
+        <label for="regName">Họ và tên</label>
+        <input type="text" id="regName" required>
+      </div>
+      <div class="field">
+        <label for="regEmail">Email</label>
+        <input type="email" id="regEmail" required>
+      </div>
+      <div class="field">
+        <label for="regPassword">Mật khẩu (ít nhất 6 ký tự)</label>
+        <input type="password" id="regPassword" minlength="6" required>
+      </div>
+      <div class="field">
+        <label for="regSetupKey">Mã thiết lập</label>
+        <input type="password" id="regSetupKey" placeholder="Mã bí mật đã đặt trong file .env" required>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">Tạo tài khoản admin</button>
+    </form>
+
+    <div class="toggle-link">
+      <span id="toggleText">Chưa có tài khoản admin?</span>
+      <button type="button" id="toggleAuthMode">Tạo tài khoản lần đầu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Dashboard ===== -->
+<div class="wrap" id="dashboard" style="display:none;">
+  <div class="dash-head">
+    <div>
+      <h1>Tin đăng của bạn</h1>
+      <p>Quản lý toàn bộ tin bất động sản đang hiển thị trên website.</p>
+    </div>
+    <button class="btn btn-primary" id="newListingBtn">+ Đăng tin mới</button>
+  </div>
+
+  <div id="listingTable">
+    <div class="empty-state">Đang tải...</div>
+  </div>
+
+  <div class="dash-head" style="margin-top:40px;">
+    <div>
+      <h1>Tin tức bất động sản</h1>
+      <p>Đăng bài viết tin tức, tư vấn luật, thiết kế kiến trúc — hiển thị trên trang chủ, cập nhật hàng ngày.</p>
+    </div>
+    <button class="btn btn-primary" id="newNewsBtn">+ Đăng bài mới</button>
+  </div>
+
+  <div class="cat-filter-row" id="newsCatFilter">
+    <button class="chip-filter active" data-cat="">Tất cả</button>
+    <button class="chip-filter" data-cat="tin-tuc">Tin tức</button>
+    <button class="chip-filter" data-cat="tu-van-luat">Tư vấn luật</button>
+    <button class="chip-filter" data-cat="thiet-ke-kien-truc">Thiết kế kiến trúc</button>
+  </div>
+
+  <div id="newsTable">
+    <div class="empty-state">Đang tải...</div>
+  </div>
+
+  <div class="dash-head" style="margin-top:40px;">
+    <div>
+      <h1>Dự án</h1>
+      <p>Đăng thông tin các dự án bất động sản — hiển thị ở mục "Dự án" trên trang chủ.</p>
+    </div>
+    <button class="btn btn-primary" id="newProjectBtn">+ Đăng dự án mới</button>
+  </div>
+
+  <div id="projectTable">
+    <div class="empty-state">Đang tải...</div>
+  </div>
+
+  <div class="dash-head" style="margin-top:40px;">
+    <div>
+      <h1>Sang nhượng</h1>
+      <p>Đăng tin sang nhượng cửa hàng, khách sạn, quán cafe, mặt bằng kinh doanh.</p>
+    </div>
+    <button class="btn btn-primary" id="newTransferBtn">+ Đăng tin sang nhượng</button>
+  </div>
+
+  <div id="transferTable">
+    <div class="empty-state">Đang tải...</div>
+  </div>
+</div>
+
+<!-- ===== Modal đăng / sửa tin sang nhượng ===== -->
+<div class="overlay" id="transferOverlay">
+  <div class="modal">
+    <button class="modal-close" data-close-overlay>&times;</button>
+    <h3 id="transferModalTitle">Đăng tin sang nhượng</h3>
+    <p class="sub">Tin sẽ hiển thị ngay ở mục "Sang nhượng" trên trang chủ.</p>
+    <div class="form-msg" id="transferMsg"></div>
+    <form id="transferForm">
+      <input type="hidden" id="transferId">
+      <div class="field">
+        <label for="transferCategory">Loại hình</label>
+        <select id="transferCategory">
+          <option value="Cửa hàng">Cửa hàng</option>
+          <option value="Khách sạn">Khách sạn</option>
+          <option value="Quán cafe">Quán cafe</option>
+          <option value="Mặt bằng">Mặt bằng</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="transferTitle">Tiêu đề tin đăng</label>
+        <input type="text" id="transferTitle" placeholder="Ví dụ: Sang nhượng quán cafe mặt tiền Q3" required>
+      </div>
+      <div class="field">
+        <label for="transferAddress">Địa chỉ</label>
+        <input type="text" id="transferAddress" placeholder="Số nhà, đường, quận/huyện, tỉnh/thành" required>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label for="transferPrice">Giá sang nhượng</label>
+          <input type="number" id="transferPrice" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="transferPriceUnit">Đơn vị</label>
+          <select id="transferPriceUnit">
+            <option value="trieu">Triệu đồng</option>
+            <option value="ty">Tỷ đồng</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="transferArea">Diện tích (m²)</label>
+          <input type="number" id="transferArea" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label for="transferDescription">Mô tả</label>
+        <textarea id="transferDescription" placeholder="Lý do sang nhượng, tình trạng kinh doanh, doanh thu (nếu có)..."></textarea>
+      </div>
+      <div class="field">
+        <label for="transferImage">Ảnh minh hoạ (JPG/PNG/WEBP, tối đa 5MB)</label>
+        <input type="file" id="transferImage" accept="image/png, image/jpeg, image/webp">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="transferSubmitBtn">Đăng tin</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Modal đăng / sửa tin tức ===== -->
+<div class="overlay" id="newsOverlay">
+  <div class="modal">
+    <button class="modal-close" data-close-overlay>&times;</button>
+    <h3 id="newsModalTitle">Đăng bài mới</h3>
+    <p class="sub">Bài viết sẽ hiển thị ngay trên trang chủ sau khi đăng.</p>
+    <div class="form-msg" id="newsMsg"></div>
+    <form id="newsForm">
+      <input type="hidden" id="newsId">
+      <div class="field">
+        <label for="newsCategory">Chuyên mục</label>
+        <select id="newsCategory">
+          <option value="tin-tuc">Tin tức bất động sản</option>
+          <option value="tu-van-luat">Tư vấn luật</option>
+          <option value="thiet-ke-kien-truc">Thiết kế kiến trúc</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="newsTitle">Tiêu đề bài viết</label>
+        <input type="text" id="newsTitle" placeholder="Ví dụ: Giá thuê mặt bằng trung tâm tăng trở lại" required>
+      </div>
+      <div class="field">
+        <label for="newsExcerpt">Tóm tắt ngắn (hiển thị ở trang chủ)</label>
+        <input type="text" id="newsExcerpt" placeholder="1-2 câu tóm tắt nội dung chính">
+      </div>
+      <div class="field">
+        <label for="newsContent">Nội dung đầy đủ</label>
+        <textarea id="newsContent" style="min-height:180px;" placeholder="Nội dung chi tiết của bài viết..." required></textarea>
+      </div>
+      <div class="field">
+        <label for="newsImage">Ảnh minh hoạ (JPG/PNG/WEBP, tối đa 5MB)</label>
+        <input type="file" id="newsImage" accept="image/png, image/jpeg, image/webp">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="newsSubmitBtn">Đăng bài viết</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Modal đăng / sửa dự án ===== -->
+<div class="overlay" id="projectOverlay">
+  <div class="modal">
+    <button class="modal-close" data-close-overlay>&times;</button>
+    <h3 id="projectModalTitle">Đăng dự án mới</h3>
+    <p class="sub">Dự án sẽ hiển thị ngay ở mục "Dự án" trên trang chủ.</p>
+    <div class="form-msg" id="projectMsg"></div>
+    <form id="projectForm">
+      <input type="hidden" id="projectId">
+      <div class="field">
+        <label for="projectName">Tên dự án</label>
+        <input type="text" id="projectName" placeholder="Ví dụ: Khu đô thị Sky Garden" required>
+      </div>
+      <div class="field">
+        <label for="projectLocation">Vị trí</label>
+        <input type="text" id="projectLocation" placeholder="Ví dụ: Xã Long Phước, Huyện Long Thành">
+      </div>
+      <div class="field">
+        <label for="projectDescription">Mô tả dự án</label>
+        <textarea id="projectDescription" style="min-height:150px;" placeholder="Thông tin chi tiết về dự án: quy mô, tiện ích, chủ đầu tư..."></textarea>
+      </div>
+      <div class="field">
+        <label for="projectImage">Ảnh minh hoạ (JPG/PNG/WEBP, tối đa 5MB)</label>
+        <input type="file" id="projectImage" accept="image/png, image/jpeg, image/webp">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="projectSubmitBtn">Đăng dự án</button>
+    </form>
+  </div>
+</div>
+
+<!-- ===== Modal đăng / sửa tin ===== -->
+<div class="overlay" id="postOverlay">
+  <div class="modal">
+    <button class="modal-close" data-close-overlay>&times;</button>
+    <h3 id="postModalTitle">Đăng tin mới</h3>
+    <p class="sub">Điền thông tin bên dưới, tin sẽ hiển thị công khai ngay sau khi lưu.</p>
+    <div class="form-msg" id="postMsg"></div>
+    <form id="postForm">
+      <input type="hidden" id="postId">
+      <div class="field-row">
+        <div class="field">
+          <label for="postType">Loại tin</label>
+          <select id="postType" required>
+            <option value="sale">Bán</option>
+            <option value="rent">Cho thuê</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="postCategory">Loại hình</label>
+          <select id="postCategory" required>
+            <option value="Căn hộ">Căn hộ</option>
+            <option value="Nhà phố">Nhà phố</option>
+            <option value="Biệt thự">Biệt thự</option>
+            <option value="Đất nền">Đất nền</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="postTitle">Tiêu đề tin đăng</label>
+        <input type="text" id="postTitle" placeholder="Ví dụ: Căn hộ 2PN view sông Quận 4" required>
+      </div>
+      <div class="field">
+        <label for="postAddress">Địa chỉ đầy đủ (hiển thị công khai)</label>
+        <input type="text" id="postAddress" placeholder="Số nhà, đường, phường/xã, tỉnh/thành" required>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label for="postProvince">Tỉnh/Thành phố</label>
+          <select id="postProvince">
+            <option value="">-- Chọn --</option>
+            <option value="TP.HCM">TP. Hồ Chí Minh</option>
+            <option value="Tây Ninh">Tây Ninh</option>
+            <option value="Bình Dương">Bình Dương</option>
+            <option value="Đồng Nai">Đồng Nai</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="postWard">Phường/Xã</label>
+          <input type="text" id="postWard" placeholder="Ví dụ: Phường Bến Nghé">
+        </div>
+        <div class="field">
+          <label for="postStreet">Tên đường</label>
+          <input type="text" id="postStreet" placeholder="Ví dụ: Nguyễn Huệ">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="postWidth">Mặt tiền / Rộng (m)</label>
+          <input type="number" id="postWidth" min="0" step="0.1">
+        </div>
+        <div class="field">
+          <label for="postLength">Chiều dài / Sâu (m)</label>
+          <input type="number" id="postLength" min="0" step="0.1">
+        </div>
+      </div>
+      <div class="field-row-3">
+        <div class="field">
+          <label for="postPrice">Giá</label>
+          <input type="number" id="postPrice" min="0" step="0.1" required>
+        </div>
+        <div class="field">
+          <label for="postPriceUnit">Đơn vị</label>
+          <select id="postPriceUnit">
+            <option value="ty">Tỷ đồng</option>
+            <option value="trieu">Triệu đồng / tháng</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="postArea">Diện tích (m²)</label>
+          <input type="number" id="postArea" min="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="postBedrooms">Phòng ngủ</label>
+          <input type="number" id="postBedrooms" min="0">
+        </div>
+        <div class="field">
+          <label for="postBathrooms">Phòng vệ sinh</label>
+          <input type="number" id="postBathrooms" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>Tiện ích</label>
+        <div class="check-row">
+          <label class="check-item"><input type="checkbox" id="postHasIncome"> Có thu nhập từ BĐS</label>
+          <label class="check-item"><input type="checkbox" id="postHasFurniture"> Có sẵn nội thất</label>
+          <label class="check-item"><input type="checkbox" id="postHasElevator"> Có thang máy</label>
+          <label class="check-item"><input type="checkbox" id="postCarAlley"> Hẻm xe hơi</label>
+        </div>
+      </div>
+      <div class="field vip-field">
+        <label class="check-item vip-check">
+          <input type="checkbox" id="postIsVip">
+          <span>⭐ Đánh dấu là <b>Tin VIP</b> — tin đặc biệt do bạn tự chọn, hiển thị riêng ở khung "Tin VIP" trên trang chủ</span>
+        </label>
+      </div>
+      <div class="field">
+        <label for="postDescription">Mô tả</label>
+        <textarea id="postDescription" placeholder="Mô tả chi tiết về căn nhà, tiện ích xung quanh..."></textarea>
+      </div>
+      <div class="field" id="existingMediaField" style="display:none;">
+        <label>Ảnh/video hiện có</label>
+        <div class="media-grid" id="existingMediaGrid"></div>
+      </div>
+      <div class="field">
+        <label for="postMedia">Thêm ảnh/video (có thể chọn nhiều — JPG/PNG/WEBP hoặc MP4/WEBM/MOV, mỗi file tối đa 50MB)</label>
+        <input type="file" id="postMedia" accept="image/png, image/jpeg, image/webp, video/mp4, video/webm, video/quicktime" multiple>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="postSubmitBtn">Đăng tin</button>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = '/api';
+  let authToken = localStorage.getItem('toam_admin_token') || null;
+  let currentUser = JSON.parse(localStorage.getItem('toam_admin_user') || 'null');
+  let isRegisterMode = false;
+
+  function showToast(msg){
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+  function setMsg(id, text, type){
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'form-msg ' + (type || '');
+  }
+  function clearMsg(id){
+    const el = document.getElementById(id);
+    el.textContent = ''; el.className = 'form-msg';
+  }
+  function authHeaders(){ return authToken ? { 'Authorization': 'Bearer ' + authToken } : {}; }
+
+  function openOverlay(id){ document.getElementById(id).classList.add('open'); }
+  function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
+  document.querySelectorAll('[data-close-overlay]').forEach(btn => {
+    btn.addEventListener('click', () => btn.closest('.overlay').classList.remove('open'));
+  });
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('open'); });
+  });
+
+  /* ===== Chuyển đổi đăng nhập / tạo tài khoản ===== */
+  document.getElementById('toggleAuthMode').addEventListener('click', () => {
+    isRegisterMode = !isRegisterMode;
+    document.getElementById('loginForm').style.display = isRegisterMode ? 'none' : 'block';
+    document.getElementById('registerForm').style.display = isRegisterMode ? 'block' : 'none';
+    document.getElementById('authTitle').textContent = isRegisterMode ? 'Tạo tài khoản admin' : 'Đăng nhập quản trị';
+    document.getElementById('authSub').textContent = isRegisterMode
+      ? 'Chỉ tạo một lần duy nhất khi thiết lập website lần đầu.'
+      : 'Đăng nhập để quản lý tin đăng trên website.';
+    document.getElementById('toggleText').textContent = isRegisterMode ? 'Đã có tài khoản?' : 'Chưa có tài khoản admin?';
+    document.getElementById('toggleAuthMode').textContent = isRegisterMode ? 'Đăng nhập' : 'Tạo tài khoản lần đầu';
+    clearMsg('authMsg');
+  });
+
+  function loginSuccess(data){
+    authToken = data.token;
+    currentUser = data.user;
+    localStorage.setItem('toam_admin_token', authToken);
+    localStorage.setItem('toam_admin_user', JSON.stringify(currentUser));
+    showDashboard();
+  }
+
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('authMsg');
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    try{
+      const res = await fetch(`${API}/auth/login`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('authMsg', data.error || 'Đăng nhập thất bại.', 'error');
+      loginSuccess(data);
+    } catch(err){ setMsg('authMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('authMsg');
+    const body = {
+      name: document.getElementById('regName').value.trim(),
+      email: document.getElementById('regEmail').value.trim(),
+      password: document.getElementById('regPassword').value,
+      setupKey: document.getElementById('regSetupKey').value
+    };
+    try{
+      const res = await fetch(`${API}/auth/register`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('authMsg', data.error || 'Tạo tài khoản thất bại.', 'error');
+      loginSuccess(data);
+      showToast('Tạo tài khoản admin thành công!');
+    } catch(err){ setMsg('authMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  function logout(){
+    authToken = null; currentUser = null;
+    localStorage.removeItem('toam_admin_token'); localStorage.removeItem('toam_admin_user');
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('loginWrap').style.display = 'flex';
+    document.getElementById('headerRight').innerHTML = '';
+  }
+
+  /* ===== Dashboard ===== */
+  function showDashboard(){
+    document.getElementById('loginWrap').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    document.getElementById('headerRight').innerHTML = `
+      <div style="display:flex; align-items:center; gap:14px;">
+        <span class="tag">Xin chào, ${currentUser.name.split(' ')[0]}</span>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Đăng xuất</button>
+      </div>`;
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    loadMyListings();
+    loadMyNews();
+    loadMyProjects();
+    loadMyTransfers();
+  }
+
+  function fmtPrice(listing){
+    const n = Number(listing.price);
+    if (listing.priceUnit === 'trieu') return n.toLocaleString('vi-VN') + ' triệu/tháng';
+    return n.toLocaleString('vi-VN') + ' tỷ';
+  }
+
+  async function loadMyListings(){
+    const container = document.getElementById('listingTable');
+    container.innerHTML = '<div class="empty-state">Đang tải...</div>';
+    try{
+      const res = await fetch(`${API}/listings?mine=1`, { headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (!data.listings.length){
+        container.innerHTML = '<div class="empty-state">Bạn chưa đăng tin nào. Bấm "Đăng tin mới" để bắt đầu.</div>';
+        return;
+      }
+
+      const rows = data.listings.map(l => `
+        <div class="lt-row">
+          <div class="lt-thumb"><img src="${l.imagePath || 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=200&q=60'}" alt=""></div>
+          <div>
+            <div class="lt-title">${l.title}${l.isVip ? ' <span style="color:var(--accent); font-size:0.8em;">⭐ VIP</span>' : ''}</div>
+            <div class="lt-addr">${l.address}</div>
+          </div>
+          <div class="lt-price">${fmtPrice(l)}</div>
+          <div><span class="lt-type ${l.listingType}">${l.listingType === 'rent' ? 'Cho thuê' : 'Bán'}</span></div>
+          <div class="lt-actions">
+            <button class="btn btn-ghost btn-sm" data-edit="${l.id}">Sửa</button>
+            <button class="btn btn-danger btn-sm" data-delete="${l.id}">Xoá</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="listing-table">
+          <div class="lt-row head"><div></div><div>Tin đăng</div><div>Giá</div><div>Loại</div><div>Thao tác</div></div>
+          ${rows}
+        </div>`;
+    } catch(err){
+      container.innerHTML = '<div class="empty-state">Không tải được danh sách tin.</div>';
+    }
+  }
+
+  document.getElementById('listingTable').addEventListener('click', async (e) => {
+    const editId = e.target.dataset.edit;
+    const delId = e.target.dataset.delete;
+
+    if (editId){
+      const res = await fetch(`${API}/listings/${editId}`);
+      const data = await res.json();
+      if (res.ok) openPostModal(data.listing);
+    }
+
+    if (delId){
+      if (!confirm('Bạn chắc chắn muốn xoá tin này?')) return;
+      const res = await fetch(`${API}/listings/${delId}`, { method:'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok){ showToast('Đã xoá tin đăng.'); loadMyListings(); }
+      else { showToast(data.error || 'Không xoá được tin.'); }
+    }
+  });
+
+  /* ===== Đăng / sửa tin ===== */
+  function mediaItemHTML(m){
+    const inner = m.type === 'video'
+      ? `<video src="${m.path}" muted></video><span class="video-badge">VIDEO</span>`
+      : `<img src="${m.path}" alt="">`;
+    return `
+      <div class="media-item" data-media-id="${m.id}">
+        ${inner}
+        <button type="button" class="remove-media" data-remove-media="${m.id}" title="Xoá">&times;</button>
+      </div>
+    `;
+  }
+
+  function renderExistingMedia(media){
+    const field = document.getElementById('existingMediaField');
+    const grid = document.getElementById('existingMediaGrid');
+    if (!media || !media.length){
+      field.style.display = 'none';
+      grid.innerHTML = '';
+      return;
+    }
+    field.style.display = 'block';
+    grid.innerHTML = media.map(mediaItemHTML).join('');
+  }
+
+  document.getElementById('existingMediaGrid').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-remove-media]');
+    if (!btn) return;
+    const mediaId = btn.dataset.removeMedia;
+    const listingId = document.getElementById('postId').value;
+    if (!listingId) return;
+    if (!confirm('Xoá ảnh/video này khỏi tin đăng?')) return;
+
+    try{
+      const res = await fetch(`${API}/listings/${listingId}/media/${mediaId}`, {
+        method: 'DELETE', headers: authHeaders()
+      });
+      const data = await res.json();
+      if (res.ok){
+        renderExistingMedia(data.media);
+        showToast('Đã xoá.');
+      } else {
+        showToast(data.error || 'Không xoá được.');
+      }
+    } catch(e){ showToast('Không kết nối được máy chủ.'); }
+  });
+
+  function openPostModal(listing){
+    clearMsg('postMsg');
+    const form = document.getElementById('postForm');
+    form.reset();
+    document.getElementById('postId').value = '';
+    document.getElementById('postModalTitle').textContent = 'Đăng tin mới';
+    document.getElementById('postSubmitBtn').textContent = 'Đăng tin';
+    renderExistingMedia(null);
+
+    if (listing){
+      document.getElementById('postModalTitle').textContent = 'Chỉnh sửa tin';
+      document.getElementById('postSubmitBtn').textContent = 'Lưu thay đổi';
+      document.getElementById('postId').value = listing.id;
+      document.getElementById('postType').value = listing.listingType;
+      document.getElementById('postCategory').value = listing.category;
+      document.getElementById('postTitle').value = listing.title;
+      document.getElementById('postAddress').value = listing.address;
+      document.getElementById('postProvince').value = listing.province || '';
+      document.getElementById('postWard').value = listing.ward || '';
+      document.getElementById('postStreet').value = listing.street || '';
+      document.getElementById('postWidth').value = listing.width || '';
+      document.getElementById('postLength').value = listing.length || '';
+      document.getElementById('postHasIncome').checked = !!listing.hasIncome;
+      document.getElementById('postHasFurniture').checked = !!listing.hasFurniture;
+      document.getElementById('postHasElevator').checked = !!listing.hasElevator;
+      document.getElementById('postCarAlley').checked = !!listing.carAlley;
+      document.getElementById('postIsVip').checked = !!listing.isVip;
+      document.getElementById('postPrice').value = listing.price;
+      document.getElementById('postPriceUnit').value = listing.priceUnit;
+      document.getElementById('postArea').value = listing.area || '';
+      document.getElementById('postBedrooms').value = listing.bedrooms || '';
+      document.getElementById('postBathrooms').value = listing.bathrooms || '';
+      document.getElementById('postDescription').value = listing.description || '';
+      renderExistingMedia(listing.media);
+    }
+    openOverlay('postOverlay');
+  }
+
+  document.getElementById('newListingBtn').addEventListener('click', () => openPostModal());
+
+  document.getElementById('postForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('postMsg');
+    const id = document.getElementById('postId').value;
+
+    const fd = new FormData();
+    fd.append('listingType', document.getElementById('postType').value);
+    fd.append('category', document.getElementById('postCategory').value);
+    fd.append('title', document.getElementById('postTitle').value.trim());
+    fd.append('address', document.getElementById('postAddress').value.trim());
+    fd.append('province', document.getElementById('postProvince').value);
+    fd.append('ward', document.getElementById('postWard').value.trim());
+    fd.append('street', document.getElementById('postStreet').value.trim());
+    fd.append('width', document.getElementById('postWidth').value);
+    fd.append('length', document.getElementById('postLength').value);
+    fd.append('hasIncome', document.getElementById('postHasIncome').checked ? '1' : '0');
+    fd.append('hasFurniture', document.getElementById('postHasFurniture').checked ? '1' : '0');
+    fd.append('hasElevator', document.getElementById('postHasElevator').checked ? '1' : '0');
+    fd.append('carAlley', document.getElementById('postCarAlley').checked ? '1' : '0');
+    fd.append('isVip', document.getElementById('postIsVip').checked ? '1' : '0');
+    fd.append('price', document.getElementById('postPrice').value);
+    fd.append('priceUnit', document.getElementById('postPriceUnit').value);
+    fd.append('area', document.getElementById('postArea').value);
+    fd.append('bedrooms', document.getElementById('postBedrooms').value);
+    fd.append('bathrooms', document.getElementById('postBathrooms').value);
+    fd.append('description', document.getElementById('postDescription').value.trim());
+    const fileInput = document.getElementById('postMedia');
+    Array.from(fileInput.files).forEach(f => fd.append('media', f));
+
+    try{
+      const res = await fetch(`${API}/listings${id ? '/' + id : ''}`, {
+        method: id ? 'PUT' : 'POST',
+        headers: authHeaders(),
+        body: fd
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('postMsg', data.error || 'Có lỗi khi lưu tin.', 'error');
+      closeOverlay('postOverlay');
+      showToast(id ? 'Đã lưu thay đổi.' : 'Đăng tin thành công!');
+      loadMyListings();
+    } catch(err){ setMsg('postMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  const CATEGORY_LABELS = {
+    'tin-tuc': 'Tin tức',
+    'tu-van-luat': 'Tư vấn luật',
+    'thiet-ke-kien-truc': 'Thiết kế kiến trúc'
+  };
+
+  /* ===== Quản lý Tin tức (Tin tức / Tư vấn luật / Thiết kế kiến trúc) ===== */
+  let activeNewsFilter = '';
+
+  async function loadMyNews(){
+    const container = document.getElementById('newsTable');
+    container.innerHTML = '<div class="empty-state">Đang tải...</div>';
+    try{
+      const params = new URLSearchParams({ limit: 100 });
+      if (activeNewsFilter) params.set('category', activeNewsFilter);
+      const res = await fetch(`${API}/news?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (!data.news.length){
+        container.innerHTML = '<div class="empty-state">Chưa có bài viết nào trong mục này. Bấm "Đăng bài mới" để bắt đầu.</div>';
+        return;
+      }
+
+      const rows = data.news.map(n => `
+        <div class="lt-row">
+          <div class="lt-thumb"><img src="${n.imagePath || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=60'}" alt=""></div>
+          <div>
+            <div class="lt-title">${n.title}</div>
+            <div class="lt-addr">${n.excerpt || ''}</div>
+          </div>
+          <div class="lt-price">${new Date(n.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('vi-VN')}</div>
+          <div><span class="lt-type sale" style="background:var(--accent);">${CATEGORY_LABELS[n.category] || n.category}</span></div>
+          <div class="lt-actions">
+            <button class="btn btn-ghost btn-sm" data-edit-news="${n.id}">Sửa</button>
+            <button class="btn btn-danger btn-sm" data-delete-news="${n.id}">Xoá</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="listing-table">
+          <div class="lt-row head"><div></div><div>Bài viết</div><div>Ngày đăng</div><div>Chuyên mục</div><div>Thao tác</div></div>
+          ${rows}
+        </div>`;
+    } catch(e){
+      container.innerHTML = '<div class="empty-state">Không tải được danh sách tin tức.</div>';
+    }
+  }
+
+  document.getElementById('newsCatFilter').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip-filter');
+    if (!btn) return;
+    document.querySelectorAll('#newsCatFilter .chip-filter').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeNewsFilter = btn.dataset.cat;
+    loadMyNews();
+  });
+
+  document.getElementById('newsTable').addEventListener('click', async (e) => {
+    const editId = e.target.dataset.editNews;
+    const delId = e.target.dataset.deleteNews;
+
+    if (editId){
+      const res = await fetch(`${API}/news/${editId}`);
+      const data = await res.json();
+      if (res.ok) openNewsModal(data.news);
+    }
+
+    if (delId){
+      if (!confirm('Bạn chắc chắn muốn xoá bài viết này?')) return;
+      const res = await fetch(`${API}/news/${delId}`, { method:'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok){ showToast('Đã xoá bài viết.'); loadMyNews(); }
+      else { showToast(data.error || 'Không xoá được.'); }
+    }
+  });
+
+  function openNewsModal(news){
+    clearMsg('newsMsg');
+    const form = document.getElementById('newsForm');
+    form.reset();
+    document.getElementById('newsId').value = '';
+    document.getElementById('newsCategory').value = 'tin-tuc';
+    document.getElementById('newsModalTitle').textContent = 'Đăng bài mới';
+    document.getElementById('newsSubmitBtn').textContent = 'Đăng bài viết';
+
+    if (news){
+      document.getElementById('newsModalTitle').textContent = 'Chỉnh sửa bài viết';
+      document.getElementById('newsSubmitBtn').textContent = 'Lưu thay đổi';
+      document.getElementById('newsId').value = news.id;
+      document.getElementById('newsCategory').value = news.category || 'tin-tuc';
+      document.getElementById('newsTitle').value = news.title;
+      document.getElementById('newsExcerpt').value = news.excerpt || '';
+      document.getElementById('newsContent').value = news.content;
+    }
+    openOverlay('newsOverlay');
+  }
+
+  document.getElementById('newNewsBtn').addEventListener('click', () => openNewsModal());
+
+  document.getElementById('newsForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('newsMsg');
+    const id = document.getElementById('newsId').value;
+
+    const fd = new FormData();
+    fd.append('category', document.getElementById('newsCategory').value);
+    fd.append('title', document.getElementById('newsTitle').value.trim());
+    fd.append('excerpt', document.getElementById('newsExcerpt').value.trim());
+    fd.append('content', document.getElementById('newsContent').value.trim());
+    const fileInput = document.getElementById('newsImage');
+    if (fileInput.files[0]) fd.append('image', fileInput.files[0]);
+
+    try{
+      const res = await fetch(`${API}/news${id ? '/' + id : ''}`, {
+        method: id ? 'PUT' : 'POST',
+        headers: authHeaders(),
+        body: fd
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('newsMsg', data.error || 'Có lỗi khi lưu bài viết.', 'error');
+      closeOverlay('newsOverlay');
+      showToast(id ? 'Đã lưu thay đổi.' : 'Đăng bài viết thành công!');
+      loadMyNews();
+    } catch(err){ setMsg('newsMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  /* ===== Quản lý Dự án ===== */
+  async function loadMyProjects(){
+    const container = document.getElementById('projectTable');
+    container.innerHTML = '<div class="empty-state">Đang tải...</div>';
+    try{
+      const res = await fetch(`${API}/projects?limit=50`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (!data.projects.length){
+        container.innerHTML = '<div class="empty-state">Chưa có dự án nào. Bấm "Đăng dự án mới" để bắt đầu.</div>';
+        return;
+      }
+
+      const rows = data.projects.map(p => `
+        <div class="lt-row">
+          <div class="lt-thumb"><img src="${p.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60'}" alt=""></div>
+          <div>
+            <div class="lt-title">${p.name}</div>
+            <div class="lt-addr">${p.location || ''}</div>
+          </div>
+          <div class="lt-price">${new Date(p.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('vi-VN')}</div>
+          <div></div>
+          <div class="lt-actions">
+            <button class="btn btn-ghost btn-sm" data-edit-project="${p.id}">Sửa</button>
+            <button class="btn btn-danger btn-sm" data-delete-project="${p.id}">Xoá</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="listing-table">
+          <div class="lt-row head"><div></div><div>Dự án</div><div>Ngày đăng</div><div></div><div>Thao tác</div></div>
+          ${rows}
+        </div>`;
+    } catch(e){
+      container.innerHTML = '<div class="empty-state">Không tải được danh sách dự án.</div>';
+    }
+  }
+
+  document.getElementById('projectTable').addEventListener('click', async (e) => {
+    const editId = e.target.dataset.editProject;
+    const delId = e.target.dataset.deleteProject;
+
+    if (editId){
+      const res = await fetch(`${API}/projects/${editId}`);
+      const data = await res.json();
+      if (res.ok) openProjectModal(data.project);
+    }
+
+    if (delId){
+      if (!confirm('Bạn chắc chắn muốn xoá dự án này?')) return;
+      const res = await fetch(`${API}/projects/${delId}`, { method:'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok){ showToast('Đã xoá dự án.'); loadMyProjects(); }
+      else { showToast(data.error || 'Không xoá được.'); }
+    }
+  });
+
+  function openProjectModal(project){
+    clearMsg('projectMsg');
+    const form = document.getElementById('projectForm');
+    form.reset();
+    document.getElementById('projectId').value = '';
+    document.getElementById('projectModalTitle').textContent = 'Đăng dự án mới';
+    document.getElementById('projectSubmitBtn').textContent = 'Đăng dự án';
+
+    if (project){
+      document.getElementById('projectModalTitle').textContent = 'Chỉnh sửa dự án';
+      document.getElementById('projectSubmitBtn').textContent = 'Lưu thay đổi';
+      document.getElementById('projectId').value = project.id;
+      document.getElementById('projectName').value = project.name;
+      document.getElementById('projectLocation').value = project.location || '';
+      document.getElementById('projectDescription').value = project.description || '';
+    }
+    openOverlay('projectOverlay');
+  }
+
+  document.getElementById('newProjectBtn').addEventListener('click', () => openProjectModal());
+
+  document.getElementById('projectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('projectMsg');
+    const id = document.getElementById('projectId').value;
+
+    const fd = new FormData();
+    fd.append('name', document.getElementById('projectName').value.trim());
+    fd.append('location', document.getElementById('projectLocation').value.trim());
+    fd.append('description', document.getElementById('projectDescription').value.trim());
+    const fileInput = document.getElementById('projectImage');
+    if (fileInput.files[0]) fd.append('image', fileInput.files[0]);
+
+    try{
+      const res = await fetch(`${API}/projects${id ? '/' + id : ''}`, {
+        method: id ? 'PUT' : 'POST',
+        headers: authHeaders(),
+        body: fd
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('projectMsg', data.error || 'Có lỗi khi lưu dự án.', 'error');
+      closeOverlay('projectOverlay');
+      showToast(id ? 'Đã lưu thay đổi.' : 'Đăng dự án thành công!');
+      loadMyProjects();
+    } catch(err){ setMsg('projectMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  /* ===== Quản lý Sang nhượng ===== */
+  async function loadMyTransfers(){
+    const container = document.getElementById('transferTable');
+    container.innerHTML = '<div class="empty-state">Đang tải...</div>';
+    try{
+      const res = await fetch(`${API}/transfers?limit=50`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (!data.transfers.length){
+        container.innerHTML = '<div class="empty-state">Chưa có tin sang nhượng nào. Bấm "Đăng tin sang nhượng" để bắt đầu.</div>';
+        return;
+      }
+
+      const rows = data.transfers.map(t => `
+        <div class="lt-row">
+          <div class="lt-thumb"><img src="${t.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60'}" alt=""></div>
+          <div>
+            <div class="lt-title">${t.title}</div>
+            <div class="lt-addr">${t.address}</div>
+          </div>
+          <div class="lt-price">${t.price ? (t.priceUnit === 'ty' ? t.price + ' tỷ' : t.price + ' triệu') : 'Liên hệ'}</div>
+          <div><span class="lt-type sale" style="background:var(--accent);">${t.category}</span></div>
+          <div class="lt-actions">
+            <button class="btn btn-ghost btn-sm" data-edit-transfer="${t.id}">Sửa</button>
+            <button class="btn btn-danger btn-sm" data-delete-transfer="${t.id}">Xoá</button>
+          </div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="listing-table">
+          <div class="lt-row head"><div></div><div>Tin đăng</div><div>Giá</div><div>Loại hình</div><div>Thao tác</div></div>
+          ${rows}
+        </div>`;
+    } catch(e){
+      container.innerHTML = '<div class="empty-state">Không tải được danh sách.</div>';
+    }
+  }
+
+  document.getElementById('transferTable').addEventListener('click', async (e) => {
+    const editId = e.target.dataset.editTransfer;
+    const delId = e.target.dataset.deleteTransfer;
+
+    if (editId){
+      const res = await fetch(`${API}/transfers/${editId}`);
+      const data = await res.json();
+      if (res.ok) openTransferModal(data.transfer);
+    }
+
+    if (delId){
+      if (!confirm('Bạn chắc chắn muốn xoá tin này?')) return;
+      const res = await fetch(`${API}/transfers/${delId}`, { method:'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (res.ok){ showToast('Đã xoá tin.'); loadMyTransfers(); }
+      else { showToast(data.error || 'Không xoá được.'); }
+    }
+  });
+
+  function openTransferModal(transfer){
+    clearMsg('transferMsg');
+    const form = document.getElementById('transferForm');
+    form.reset();
+    document.getElementById('transferId').value = '';
+    document.getElementById('transferModalTitle').textContent = 'Đăng tin sang nhượng';
+    document.getElementById('transferSubmitBtn').textContent = 'Đăng tin';
+
+    if (transfer){
+      document.getElementById('transferModalTitle').textContent = 'Chỉnh sửa tin sang nhượng';
+      document.getElementById('transferSubmitBtn').textContent = 'Lưu thay đổi';
+      document.getElementById('transferId').value = transfer.id;
+      document.getElementById('transferCategory').value = transfer.category;
+      document.getElementById('transferTitle').value = transfer.title;
+      document.getElementById('transferAddress').value = transfer.address;
+      document.getElementById('transferPrice').value = transfer.price || '';
+      document.getElementById('transferPriceUnit').value = transfer.priceUnit || 'trieu';
+      document.getElementById('transferArea').value = transfer.area || '';
+      document.getElementById('transferDescription').value = transfer.description || '';
+    }
+    openOverlay('transferOverlay');
+  }
+
+  document.getElementById('newTransferBtn').addEventListener('click', () => openTransferModal());
+
+  document.getElementById('transferForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearMsg('transferMsg');
+    const id = document.getElementById('transferId').value;
+
+    const fd = new FormData();
+    fd.append('category', document.getElementById('transferCategory').value);
+    fd.append('title', document.getElementById('transferTitle').value.trim());
+    fd.append('address', document.getElementById('transferAddress').value.trim());
+    fd.append('price', document.getElementById('transferPrice').value);
+    fd.append('priceUnit', document.getElementById('transferPriceUnit').value);
+    fd.append('area', document.getElementById('transferArea').value);
+    fd.append('description', document.getElementById('transferDescription').value.trim());
+    const fileInput = document.getElementById('transferImage');
+    if (fileInput.files[0]) fd.append('image', fileInput.files[0]);
+
+    try{
+      const res = await fetch(`${API}/transfers${id ? '/' + id : ''}`, {
+        method: id ? 'PUT' : 'POST',
+        headers: authHeaders(),
+        body: fd
+      });
+      const data = await res.json();
+      if (!res.ok) return setMsg('transferMsg', data.error || 'Có lỗi khi lưu tin.', 'error');
+      closeOverlay('transferOverlay');
+      showToast(id ? 'Đã lưu thay đổi.' : 'Đăng tin thành công!');
+      loadMyTransfers();
+    } catch(err){ setMsg('transferMsg', 'Không kết nối được máy chủ.', 'error'); }
+  });
+
+  /* ===== Khởi động ===== */
+  if (authToken && currentUser){ showDashboard(); }
+</script>
+
+</body>
+</html>
