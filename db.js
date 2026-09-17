@@ -1,8 +1,8 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const dbPath = path.join(__dirname, 'data', 'toam.db');
-const db = new Database(dbPath);
+const dbPath = path.join(dataDir, 'toam.db'); const db = new Database(dbPath); 
+const fs = require('fs'); const dataDir = path.join(__dirname, 'data'); if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
