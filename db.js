@@ -19,6 +19,20 @@ db.exec(`
   )
 `);
 
+// Di trú an toàn: thêm cột vai trò (role). Tài khoản cũ nhất được coi là admin nếu chưa có admin nào.
+const userColumns = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+if (!userColumns.includes('role')) {
+  db.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`);
+}
+// Phiên bản token: tăng lên khi đăng xuất → mọi phiên đăng nhập cũ của tài khoản đó lập tức vô hiệu (thu hồi phiên).
+if (!userColumns.includes('token_version')) {
+  db.exec(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`);
+}
+if (!db.prepare("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1").get()) {
+  const first = db.prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1').get();
+  if (first) db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(first.id);
+}
+
 // Bảng tin đăng
 db.exec(`
   CREATE TABLE IF NOT EXISTS listings (

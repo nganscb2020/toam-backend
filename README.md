@@ -12,6 +12,8 @@ quản trị riêng, không xuất hiện trên menu công khai.
   `https://toam.vn/admin.html`). **Giữ kín địa chỉ này**, đừng gắn link ở đâu
   công khai.
 
+> 🔒 **Bảo mật:** bản này đã được gia cố. Đọc `BAO-MAT.md` (các việc bắt buộc làm trước khi chạy + những gì đã sửa). Cần đặt `JWT_SECRET` và `ADMIN_SETUP_KEY` trong `.env` — xem `.env.example`. Mật khẩu admin tối thiểu 10 ký tự. Đăng nhập dùng cookie HttpOnly nên production **bắt buộc chạy HTTPS**.
+
 ## Công nghệ dùng
 
 - Node.js + Express — máy chủ và API
