@@ -1,9 +1,10 @@
 const express = require('express');
 const nodemailer = require('nodemailer');
+const { checkFields } = require('../lib/validate');
 
 const router = express.Router();
 
-const CONTACT_EMAIL = 'nganscb2020@gmail.com';
+const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'nganscb2020@gmail.com';
 
 // Tạo transporter dùng SMTP (đọc cấu hình từ file .env). Nếu chưa cấu hình,
 // transporter vẫn được tạo nhưng gửi thư sẽ báo lỗi rõ ràng — không làm sập server.
@@ -23,11 +24,36 @@ function buildTransporter() {
 }
 
 // ---- Gửi yêu cầu liên hệ (Cần thuê/mua hoặc Ký gửi) ----
+// Bỏ ký tự xuống dòng / điều khiển để không chèn được header email (email header injection)
+const oneLine = (v) => String(v || '').replace(/[\r\n\u0000-\u001f]+/g, ' ').trim();
+const PHONE_RE = /^[0-9+\-\s().]{8,20}$/;
+
 router.post('/', async (req, res) => {
-  const { formType, purpose, street, price, requirements, name, phone } = req.body;
+  const body = req.body || {};
+
+  // Bẫy bot (honeypot): người thật không thấy và không điền ô "website" này; bot tự động thì thường điền.
+  // Trả về "thành công" giả để bot không biết mình bị chặn, nhưng KHÔNG gửi email.
+  if (body.website) return res.json({ ok: true });
+
+  const bad = checkFields(body, {
+    formType: [20, 'Loại yêu cầu'], purpose: [300, 'Mục đích sử dụng'], street: [200, 'Tên phố'],
+    price: [100, 'Giá'], requirements: [2000, 'Yêu cầu khác'], name: [100, 'Họ tên'], phone: [20, 'Số điện thoại']
+  });
+  if (bad) return res.status(400).json({ error: bad });
+
+  const { formType } = body;
+  const purpose = oneLine(body.purpose);
+  const street = oneLine(body.street);
+  const price = oneLine(body.price);
+  const name = oneLine(body.name);
+  const phone = oneLine(body.phone);
+  const requirements = String(body.requirements || '').slice(0, 2000).trim();
 
   if (!purpose || !name || !phone) {
     return res.status(400).json({ error: 'Vui lòng nhập đầy đủ mục đích sử dụng, họ tên và số điện thoại.' });
+  }
+  if (!PHONE_RE.test(phone)) {
+    return res.status(400).json({ error: 'Số điện thoại không hợp lệ.' });
   }
 
   const transporter = buildTransporter();

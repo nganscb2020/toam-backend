@@ -1,31 +1,16 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
+const { create: createUpload } = require('../middleware/upload');
+const { checkFields, checkNumbers, idParam } = require('../lib/validate');
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const upload = createUpload({ prefix: 'transfer', maxFileSize: 5 * 1024 * 1024 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
-    cb(null, `transfer-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = /jpeg|jpg|png|webp/.test(file.mimetype);
-    cb(ok ? null : new Error('Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.'), ok);
-  }
-});
+router.param('id', idParam);
 
 function toPublicTransfer(row) {
   return {
@@ -86,8 +71,12 @@ router.get('/:id', (req, res) => {
 });
 
 // ---- Đăng tin mới ----
-router.post('/', requireAuth, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), (req, res) => {
   const { category, title, description, price, priceUnit, address, area } = req.body;
+  const bad = checkFields(req.body, { category: [100, 'Loại hình'], title: [200, 'Tiêu đề'], description: [20000, 'Mô tả'], priceUnit: [10, 'Đơn vị giá'], address: [300, 'Địa chỉ'] })
+    || checkNumbers(req.body, { price: [0, 1e12, 'Giá'], area: [0, 1e7, 'Diện tích'] });
+  if (bad) return res.status(400).json({ error: bad });
+  if (priceUnit && !['ty', 'trieu'].includes(priceUnit)) return res.status(400).json({ error: 'Đơn vị giá không hợp lệ.' });
   if (!category || !title || !address) {
     return res.status(400).json({ error: 'Vui lòng nhập loại hình, tiêu đề và địa chỉ.' });
   }
@@ -112,11 +101,15 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Sửa tin ----
-router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
+router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
   const existing = db.prepare('SELECT * FROM transfers WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
 
   const { category, title, description, price, priceUnit, address, area } = req.body;
+  const bad = checkFields(req.body, { category: [100, 'Loại hình'], title: [200, 'Tiêu đề'], description: [20000, 'Mô tả'], priceUnit: [10, 'Đơn vị giá'], address: [300, 'Địa chỉ'] })
+    || checkNumbers(req.body, { price: [0, 1e12, 'Giá'], area: [0, 1e7, 'Diện tích'] });
+  if (bad) return res.status(400).json({ error: bad });
+  if (priceUnit && !['ty', 'trieu'].includes(priceUnit)) return res.status(400).json({ error: 'Đơn vị giá không hợp lệ.' });
 
   let imagePath = existing.image_path;
   if (req.file) {
@@ -151,7 +144,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Xoá tin ----
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   const existing = db.prepare('SELECT * FROM transfers WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
 

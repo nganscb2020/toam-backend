@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quản trị — Tổ Ấm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -158,6 +159,7 @@
     .lt-price, .lt-type, .lt-actions{ grid-column: 2; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -196,7 +198,7 @@
       </div>
       <div class="field">
         <label for="regPassword">Mật khẩu (ít nhất 6 ký tự)</label>
-        <input type="password" id="regPassword" minlength="6" required>
+        <input type="password" id="regPassword" minlength="10" required>
       </div>
       <div class="field">
         <label for="regSetupKey">Mã thiết lập</label>
@@ -522,9 +524,25 @@
 
 <script>
   const API = '/api';
-  let authToken = localStorage.getItem('toam_admin_token') || null;
-  let currentUser = JSON.parse(localStorage.getItem('toam_admin_user') || 'null');
+  // Phiên đăng nhập nằm trong cookie HttpOnly do máy chủ đặt — trang này KHÔNG giữ token nào cả
+  // (JavaScript không đọc được cookie đó nên script độc hại cũng không lấy trộm được).
+  let currentUser = null;
   let isRegisterMode = false;
+
+  // Mọi lời gọi tới /api: gửi kèm cookie + header chống CSRF; nếu phiên hết hạn (401) thì quay về màn hình đăng nhập.
+  const _fetch = window.fetch.bind(window);
+  window.fetch = async (url, opts = {}) => {
+    const isApi = typeof url === 'string' && url.startsWith(API);
+    if (isApi) {
+      opts = { ...opts, credentials: 'same-origin', headers: { ...(opts.headers || {}), 'X-Requested-With': 'toam-admin' } };
+    }
+    const res = await _fetch(url, opts);
+    if (isApi && res.status === 401 && currentUser && !url.startsWith(API + '/auth/')) {
+      showLogin();
+      showToast('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+    }
+    return res;
+  };
 
   function showToast(msg){
     const toast = document.getElementById('toast');
@@ -541,7 +559,8 @@
     const el = document.getElementById(id);
     el.textContent = ''; el.className = 'form-msg';
   }
-  function authHeaders(){ return authToken ? { 'Authorization': 'Bearer ' + authToken } : {}; }
+  // Giữ lại để các chỗ gọi cũ không phải sửa; xác thực giờ đi bằng cookie nên không cần header nào ở đây.
+  function authHeaders(){ return {}; }
 
   function openOverlay(id){ document.getElementById(id).classList.add('open'); }
   function closeOverlay(id){ document.getElementById(id).classList.remove('open'); }
@@ -567,10 +586,7 @@
   });
 
   function loginSuccess(data){
-    authToken = data.token;
     currentUser = data.user;
-    localStorage.setItem('toam_admin_token', authToken);
-    localStorage.setItem('toam_admin_user', JSON.stringify(currentUser));
     showDashboard();
   }
 
@@ -611,12 +627,16 @@
     } catch(err){ setMsg('authMsg', 'Không kết nối được máy chủ.', 'error'); }
   });
 
-  function logout(){
-    authToken = null; currentUser = null;
-    localStorage.removeItem('toam_admin_token'); localStorage.removeItem('toam_admin_user');
+  function showLogin(){
+    currentUser = null;
     document.getElementById('dashboard').style.display = 'none';
     document.getElementById('loginWrap').style.display = 'flex';
     document.getElementById('headerRight').innerHTML = '';
+  }
+
+  async function logout(){
+    try { await fetch(`${API}/auth/logout`, { method: 'POST' }); } catch (err) { /* vẫn đưa về màn hình đăng nhập */ }
+    showLogin();
   }
 
   /* ===== Dashboard ===== */
@@ -625,7 +645,7 @@
     document.getElementById('dashboard').style.display = 'block';
     document.getElementById('headerRight').innerHTML = `
       <div style="display:flex; align-items:center; gap:14px;">
-        <span class="tag">Xin chào, ${currentUser.name.split(' ')[0]}</span>
+        <span class="tag">Xin chào, ${esc(currentUser.name.split(' ')[0])}</span>
         <button class="btn btn-ghost btn-sm" id="logoutBtn">Đăng xuất</button>
       </div>`;
     document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -656,13 +676,13 @@
 
       const rows = data.listings.map(l => `
         <div class="lt-row">
-          <div class="lt-thumb"><img src="${l.imagePath || 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=200&q=60'}" alt=""></div>
+          <div class="lt-thumb"><img src="${esc(l.imagePath || 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=200&q=60')}" alt=""></div>
           <div>
-            <div class="lt-title">${l.title}${l.isVip ? ' <span style="color:var(--accent); font-size:0.8em;">⭐ VIP</span>' : ''}</div>
-            <div class="lt-addr">${l.address}</div>
+            <div class="lt-title">${esc(l.title)}${l.isVip ? ' <span style="color:var(--accent); font-size:0.8em;">⭐ VIP</span>' : ''}</div>
+            <div class="lt-addr">${esc(l.address)}</div>
           </div>
           <div class="lt-price">${fmtPrice(l)}</div>
-          <div><span class="lt-type ${l.listingType}">${l.listingType === 'rent' ? 'Cho thuê' : 'Bán'}</span></div>
+          <div><span class="lt-type ${esc(l.listingType)}">${l.listingType === 'rent' ? 'Cho thuê' : 'Bán'}</span></div>
           <div class="lt-actions">
             <button class="btn btn-ghost btn-sm" data-edit="${l.id}">Sửa</button>
             <button class="btn btn-danger btn-sm" data-delete="${l.id}">Xoá</button>
@@ -702,8 +722,8 @@
   /* ===== Đăng / sửa tin ===== */
   function mediaItemHTML(m){
     const inner = m.type === 'video'
-      ? `<video src="${m.path}" muted></video><span class="video-badge">VIDEO</span>`
-      : `<img src="${m.path}" alt="">`;
+      ? `<video src="${esc(m.path)}" muted></video><span class="video-badge">VIDEO</span>`
+      : `<img src="${esc(m.path)}" alt="">`;
     return `
       <div class="media-item" data-media-id="${m.id}">
         ${inner}
@@ -855,13 +875,13 @@
 
       const rows = data.news.map(n => `
         <div class="lt-row">
-          <div class="lt-thumb"><img src="${n.imagePath || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=60'}" alt=""></div>
+          <div class="lt-thumb"><img src="${esc(n.imagePath || 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200&q=60')}" alt=""></div>
           <div>
-            <div class="lt-title">${n.title}</div>
-            <div class="lt-addr">${n.excerpt || ''}</div>
+            <div class="lt-title">${esc(n.title)}</div>
+            <div class="lt-addr">${esc(n.excerpt || '')}</div>
           </div>
           <div class="lt-price">${new Date(n.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('vi-VN')}</div>
-          <div><span class="lt-type sale" style="background:var(--accent);">${CATEGORY_LABELS[n.category] || n.category}</span></div>
+          <div><span class="lt-type sale" style="background:var(--accent);">${esc(CATEGORY_LABELS[n.category] || n.category)}</span></div>
           <div class="lt-actions">
             <button class="btn btn-ghost btn-sm" data-edit-news="${n.id}">Sửa</button>
             <button class="btn btn-danger btn-sm" data-delete-news="${n.id}">Xoá</button>
@@ -973,10 +993,10 @@
 
       const rows = data.projects.map(p => `
         <div class="lt-row">
-          <div class="lt-thumb"><img src="${p.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60'}" alt=""></div>
+          <div class="lt-thumb"><img src="${esc(p.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60')}" alt=""></div>
           <div>
-            <div class="lt-title">${p.name}</div>
-            <div class="lt-addr">${p.location || ''}</div>
+            <div class="lt-title">${esc(p.name)}</div>
+            <div class="lt-addr">${esc(p.location || '')}</div>
           </div>
           <div class="lt-price">${new Date(p.createdAt.replace(' ', 'T') + 'Z').toLocaleDateString('vi-VN')}</div>
           <div></div>
@@ -1079,13 +1099,13 @@
 
       const rows = data.transfers.map(t => `
         <div class="lt-row">
-          <div class="lt-thumb"><img src="${t.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60'}" alt=""></div>
+          <div class="lt-thumb"><img src="${esc(t.imagePath || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=200&q=60')}" alt=""></div>
           <div>
-            <div class="lt-title">${t.title}</div>
-            <div class="lt-addr">${t.address}</div>
+            <div class="lt-title">${esc(t.title)}</div>
+            <div class="lt-addr">${esc(t.address)}</div>
           </div>
           <div class="lt-price">${t.price ? (t.priceUnit === 'ty' ? t.price + ' tỷ' : t.price + ' triệu') : 'Liên hệ'}</div>
-          <div><span class="lt-type sale" style="background:var(--accent);">${t.category}</span></div>
+          <div><span class="lt-type sale" style="background:var(--accent);">${esc(t.category)}</span></div>
           <div class="lt-actions">
             <button class="btn btn-ghost btn-sm" data-edit-transfer="${t.id}">Sửa</button>
             <button class="btn btn-danger btn-sm" data-delete-transfer="${t.id}">Xoá</button>
@@ -1178,7 +1198,15 @@
   });
 
   /* ===== Khởi động ===== */
-  if (authToken && currentUser){ showDashboard(); }
+  // Hỏi máy chủ phiên hiện tại còn hiệu lực không (cookie tự động được gửi kèm)
+  (async () => {
+    try {
+      const res = await fetch(`${API}/auth/me`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.user && data.user.role === 'admin'){ currentUser = data.user; showDashboard(); }
+    } catch (err) { /* chưa đăng nhập: giữ màn hình đăng nhập */ }
+  })();
 </script>
 
 </body>

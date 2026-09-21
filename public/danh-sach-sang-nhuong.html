@@ -123,6 +123,7 @@
     .footer-grid{ grid-template-columns: 1fr 1fr; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -305,15 +306,15 @@
   function transferRowHTML(t){
     return `
       <a class="listing-row" href="sang-nhuong-chi-tiet.html?id=${t.id}">
-        <div class="thumb"><img src="${t.imagePath || FALLBACK_IMG}" alt="${t.title}" loading="lazy"></div>
+        <div class="thumb"><img src="${esc(t.imagePath || FALLBACK_IMG)}" alt="${esc(t.title)}" loading="lazy"></div>
         <div>
-          <div class="lr-title">${t.title}</div>
-          <div class="lr-date">📅 ${fmtDate(t.createdAt)} &nbsp;•&nbsp; ${t.category}</div>
-          <div class="lr-desc">${(t.description || 'Liên hệ để biết thêm chi tiết.').slice(0,150)}${(t.description||'').length > 150 ? '…' : ''}</div>
+          <div class="lr-title">${esc(t.title)}</div>
+          <div class="lr-date">📅 ${fmtDate(t.createdAt)} &nbsp;•&nbsp; ${esc(t.category)}</div>
+          <div class="lr-desc">${esc((t.description || 'Liên hệ để biết thêm chi tiết.').slice(0,150))}${(t.description||'').length > 150 ? '…' : ''}</div>
           <div class="lr-facts">
             <span class="price">Giá: <b>${fmtPrice(t)}</b></span>
             ${t.area ? `<span>Diện tích: <b>${t.area} m²</b></span>` : ''}
-            <span>📍 <b>${t.address}</b></span>
+            <span>📍 <b>${esc(t.address)}</b></span>
           </div>
         </div>
       </a>

@@ -122,6 +122,7 @@
     .article-body{ padding: 18px; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -284,20 +285,20 @@
       if (!res.ok){ renderNotFound(); return; }
       const data = await res.json();
       const p = data.project;
-      document.title = `${p.name} — Tổ Ấm`;
+      document.title = `${esc(p.name)} — Tổ Ấm`;
       document.getElementById('breadcrumbTitle').textContent = p.name;
 
       document.getElementById('projectContainer').innerHTML = `
         <div class="article-grid">
           <div class="article-main">
-            <div class="article-cover"><img src="${p.imagePath || PROJECT_FALLBACK_IMG}" alt="${p.name}"></div>
+            <div class="article-cover"><img src="${esc(p.imagePath || PROJECT_FALLBACK_IMG)}" alt="${esc(p.name)}"></div>
             <div class="article-body">
-              <h1>${p.name}</h1>
+              <h1>${esc(p.name)}</h1>
               <div class="article-meta">
-                ${p.location ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${p.location}` : ''}
+                ${p.location ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 6-9 12-9 12s-9-6-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> ${esc(p.location)}` : ''}
                 <span>📅 Cập nhật: ${fmtDate(p.createdAt)}</span>
               </div>
-              <div class="article-content">${p.description || 'Liên hệ với chúng tôi để biết thêm chi tiết về dự án này.'}</div>
+              <div class="article-content">${esc(p.description || 'Liên hệ với chúng tôi để biết thêm chi tiết về dự án này.')}</div>
             </div>
           </div>
           <aside>
@@ -328,8 +329,8 @@
       if (!items.length){ el.innerHTML = '<div class="grid-status">Chưa có dự án khác.</div>'; return; }
       el.innerHTML = items.map(p => `
         <a class="side-item" href="du-an-chi-tiet.html?id=${p.id}">
-          <div class="thumb"><img src="${p.imagePath || PROJECT_FALLBACK_IMG}" alt=""></div>
-          <div class="title">${p.name}</div>
+          <div class="thumb"><img src="${esc(p.imagePath || PROJECT_FALLBACK_IMG)}" alt=""></div>
+          <div class="title">${esc(p.name)}</div>
         </a>
       `).join('');
     } catch(e){ /* im lặng bỏ qua */ }

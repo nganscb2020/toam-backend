@@ -458,6 +458,7 @@
     .hot-carousel-wrap.overlap{ margin-top:-170px; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -708,6 +709,7 @@
           <textarea id="cfRequirements" placeholder="Yêu cầu khác: Vỉa hè, Riêng biệt, Tiện ích, Hướng...(*)"></textarea>
           <input type="text" id="cfName" placeholder="Họ tên (*)" required>
           <input type="text" id="cfPhone" placeholder="Số điện thoại (*)" required>
+          <input type="text" id="cfWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;overflow:hidden;">
           <button type="submit" id="cfSubmitBtn">GỬI YÊU CẦU</button>
         </form>
         <div class="form-note" id="cfNote"></div>
@@ -848,10 +850,10 @@
       <a class="hot-card" href="listing.html?id=${l.id}">
         <div class="thumb">
           <span class="hot-badge">HOT</span>
-          <img src="${l.imagePath || FALLBACK_IMG}" alt="${l.title}">
+          <img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}">
         </div>
         <div class="info">
-          <div class="title">${l.title}</div>
+          <div class="title">${esc(l.title)}</div>
           <div class="meta-row"><span>Giá: <b>${fmtPrice(l)}</b></span><span>DT: <b>${l.area ? l.area + ' m²' : '—'}</b></span></div>
         </div>
       </a>
@@ -906,16 +908,16 @@
     if (l.bathrooms) factsExtra.push(`<span>🚿 <b>${l.bathrooms}</b> WC</span>`);
     return `
       <a class="listing-row" href="listing.html?id=${l.id}">
-        <div class="thumb"><img src="${l.imagePath || FALLBACK_IMG}" alt="${l.title}" loading="lazy"></div>
+        <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}" loading="lazy"></div>
         <div>
-          <div class="lr-title">${l.title}</div>
-          <div class="lr-date">📅 ${fmtDate(l.createdAt)} &nbsp;•&nbsp; ${typeLabel} · ${l.category}</div>
-          <div class="lr-desc">${(l.description || 'Liên hệ để biết thêm chi tiết về bất động sản này.').slice(0,140)}${(l.description||'').length > 140 ? '…' : ''}</div>
+          <div class="lr-title">${esc(l.title)}</div>
+          <div class="lr-date">📅 ${fmtDate(l.createdAt)} &nbsp;•&nbsp; ${typeLabel} · ${esc(l.category)}</div>
+          <div class="lr-desc">${esc((l.description || 'Liên hệ để biết thêm chi tiết về bất động sản này.').slice(0,140))}${(l.description||'').length > 140 ? '…' : ''}</div>
           <div class="lr-facts">
             <span class="price">Giá: <b>${fmtPrice(l)}</b></span>
             <span>Diện tích: <b>${l.area ? l.area + ' m²' : '—'}</b></span>
             ${factsExtra.join('')}
-            <span>📍 <b>${l.address}</b></span>
+            <span>📍 <b>${esc(l.address)}</b></span>
           </div>
         </div>
       </a>
@@ -1076,9 +1078,9 @@
   function sideItemHTML(l){
     return `
       <a class="side-item" href="listing.html?id=${l.id}">
-        <div class="thumb"><img src="${l.imagePath || FALLBACK_IMG}" alt=""></div>
+        <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt=""></div>
         <div>
-          <div class="t">${l.title}</div>
+          <div class="t">${esc(l.title)}</div>
           <div class="facts"><span>Giá: <b>${fmtPrice(l)}</b></span><span>${l.area ? l.area + ' m²' : ''}</span></div>
         </div>
       </a>
@@ -1151,7 +1153,8 @@
       price: document.getElementById('cfPrice').value.trim(),
       requirements: document.getElementById('cfRequirements').value.trim(),
       name: document.getElementById('cfName').value.trim(),
-      phone: document.getElementById('cfPhone').value.trim()
+      phone: document.getElementById('cfPhone').value.trim(),
+      website: document.getElementById('cfWebsite').value
     };
 
     submitBtn.disabled = true;
@@ -1196,9 +1199,9 @@
       }
       el.innerHTML = data.projects.map(p => `
         <a class="project-card" href="du-an-chi-tiet.html?id=${p.id}">
-          <div class="thumb"><img src="${p.imagePath || PROJECT_FALLBACK_IMG}" alt="${p.name}"></div>
-          <div class="band">${p.name}</div>
-          <p>${(p.description || 'Xem chi tiết dự án').slice(0,110)}${(p.description||'').length > 110 ? '…' : ''}</p>
+          <div class="thumb"><img src="${esc(p.imagePath || PROJECT_FALLBACK_IMG)}" alt="${esc(p.name)}"></div>
+          <div class="band">${esc(p.name)}</div>
+          <p>${esc((p.description || 'Xem chi tiết dự án').slice(0,110))}${(p.description||'').length > 110 ? '…' : ''}</p>
         </a>
       `).join('');
     } catch(e){
@@ -1217,7 +1220,7 @@
         return;
       }
       el.innerHTML = data.news.map(n => `
-        <li><a href="tin-tuc-chi-tiet.html?id=${n.id}">${n.title}</a></li>
+        <li><a href="tin-tuc-chi-tiet.html?id=${n.id}">${esc(n.title)}</a></li>
       `).join('');
     } catch(e){
       el.innerHTML = '<li style="padding:8px 0; color:var(--ink-soft); font-size:0.84rem;">Không tải được.</li>';
@@ -1248,8 +1251,8 @@
       const [featured, ...rest] = data.news;
       const listHTML = rest.slice(0, 5).map(n => `
         <a class="news-list-item" href="tin-tuc-chi-tiet.html?id=${n.id}">
-          <div class="thumb"><img src="${n.imagePath || NEWS_FALLBACK_IMG}" alt=""></div>
-          <div class="title">${n.title}</div>
+          <div class="thumb"><img src="${esc(n.imagePath || NEWS_FALLBACK_IMG)}" alt=""></div>
+          <div class="title">${esc(n.title)}</div>
         </a>
       `).join('');
 
@@ -1257,11 +1260,11 @@
         <div class="news-block">
           <a class="news-featured" href="tin-tuc-chi-tiet.html?id=${featured.id}">
             <div class="thumb">
-              <img src="${featured.imagePath || NEWS_FALLBACK_IMG}" alt="${featured.title}">
+              <img src="${esc(featured.imagePath || NEWS_FALLBACK_IMG)}" alt="${esc(featured.title)}">
             </div>
             <div class="body">
-              <h3>${featured.title}</h3>
-              <p>${(featured.excerpt || featured.content || '').slice(0,120)}${(featured.excerpt || featured.content || '').length > 120 ? '…' : ''}</p>
+              <h3>${esc(featured.title)}</h3>
+              <p>${esc((featured.excerpt || featured.content || '').slice(0,120))}${(featured.excerpt || featured.content || '').length > 120 ? '…' : ''}</p>
             </div>
           </a>
           <div class="news-list">${listHTML}</div>

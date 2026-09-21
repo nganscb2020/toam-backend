@@ -125,6 +125,7 @@
   @media (max-width: 900px){ .detail-grid{ grid-template-columns: 1fr; } .footer-grid{ grid-template-columns: 1fr 1fr; } }
   @media (max-width: 560px){ .top-bar .right-links{ display:none; } .detail-body{ padding: 18px; } }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -292,34 +293,34 @@
       if (!res.ok){ renderNotFound(); return; }
       const data = await res.json();
       const t = data.transfer;
-      document.title = `${t.title} — Tổ Ấm`;
+      document.title = `${esc(t.title)} — Tổ Ấm`;
       document.getElementById('breadcrumbTitle').textContent = t.title;
 
       document.getElementById('detailContainer').innerHTML = `
         <div class="detail-grid">
           <div class="detail-main">
-            <div class="detail-image"><img src="${t.imagePath || FALLBACK_IMG}" alt="${t.title}"></div>
+            <div class="detail-image"><img src="${esc(t.imagePath || FALLBACK_IMG)}" alt="${esc(t.title)}"></div>
             <div class="detail-body">
-              <h1>${t.title}</h1>
+              <h1>${esc(t.title)}</h1>
               <div class="detail-price-row">
                 <div class="detail-price">${fmtPrice(t)}</div>
-                <div class="detail-addr">📍 ${t.address}</div>
+                <div class="detail-addr">📍 ${esc(t.address)}</div>
               </div>
               <div class="detail-facts">
-                <div><div class="v">${t.category}</div><div class="l">Loại hình</div></div>
+                <div><div class="v">${esc(t.category)}</div><div class="l">Loại hình</div></div>
                 ${t.area ? `<div><div class="v">${t.area} m²</div><div class="l">Diện tích</div></div>` : ''}
                 <div><div class="v">${fmtDate(t.createdAt)}</div><div class="l">Ngày đăng</div></div>
               </div>
               <div class="detail-desc">
                 <h3>Mô tả chi tiết</h3>
-                <p>${t.description || 'Liên hệ với chúng tôi để biết thêm chi tiết.'}</p>
+                <p>${esc(t.description || 'Liên hệ với chúng tôi để biết thêm chi tiết.')}</p>
               </div>
             </div>
           </div>
           <aside>
             <div class="contact-box">
               <h3>Liên hệ tư vấn</h3>
-              <div class="owner">Người đăng: <b>${t.ownerName || 'Tổ Ấm'}</b></div>
+              <div class="owner">Người đăng: <b>${esc(t.ownerName || 'Tổ Ấm')}</b></div>
               <a href="tel:0902312009" class="btn-call">📞 Gọi hotline: 090 231 2009</a>
             </div>
             <div class="side-box">
@@ -345,8 +346,8 @@
       if (!items.length){ el.innerHTML = '<div class="grid-status">Chưa có tin khác.</div>'; return; }
       el.innerHTML = items.map(t => `
         <a class="side-item" href="sang-nhuong-chi-tiet.html?id=${t.id}">
-          <div class="thumb"><img src="${t.imagePath || FALLBACK_IMG}" alt=""></div>
-          <div class="title">${t.title}</div>
+          <div class="thumb"><img src="${esc(t.imagePath || FALLBACK_IMG)}" alt=""></div>
+          <div class="title">${esc(t.title)}</div>
         </a>
       `).join('');
     } catch(e){ /* im lặng bỏ qua */ }

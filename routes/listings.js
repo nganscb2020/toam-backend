@@ -1,40 +1,18 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireAdmin, optionalAuth } = require('../middleware/auth');
+const { create: createUpload } = require('../middleware/upload');
+const { checkFields, checkNumbers, idParam } = require('../lib/validate');
 
 const router = express.Router();
 
-// ---- Cấu hình tải ảnh/video lên ----
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// ---- Cấu hình tải ảnh/video lên (kiểm tra nội dung thật của file, xem middleware/upload.js) ----
+const upload = createUpload({ prefix: 'listing', allowVideo: true, maxFileSize: 50 * 1024 * 1024 });
 
-const IMAGE_EXT = ['.jpg', '.jpeg', '.png', '.webp'];
-const VIDEO_EXT = ['.mp4', '.webm', '.mov'];
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const isVideo = file.mimetype.startsWith('video/');
-    const safeExt = isVideo
-      ? (VIDEO_EXT.includes(ext) ? ext : '.mp4')
-      : (IMAGE_EXT.includes(ext) ? ext : '.jpg');
-    cb(null, `listing-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // tối đa 50MB/file (đủ cho video ngắn)
-  fileFilter: (req, file, cb) => {
-    const okImage = /jpeg|jpg|png|webp/.test(file.mimetype);
-    const okVideo = /mp4|webm|quicktime/.test(file.mimetype);
-    cb((okImage || okVideo) ? null : new Error('Chỉ chấp nhận ảnh JPG/PNG/WEBP hoặc video MP4/WEBM/MOV.'), okImage || okVideo);
-  }
-});
+router.param('id', idParam);
+router.param('mediaId', idParam);
 
 function toBool(v) { return v ? 1 : 0; }
 
@@ -175,12 +153,12 @@ router.get('/', optionalAuth, (req, res) => {
 });
 
 // ---- Chi tiết 1 tin (kèm toàn bộ ảnh/video) ----
-router.get('/:id', (req, res) => {
+router.get('/:id', optionalAuth, (req, res) => {
   const row = db.prepare(`
     SELECT listings.*, users.name AS owner_name, users.phone AS owner_phone
     FROM listings JOIN users ON users.id = listings.user_id
-    WHERE listings.id = ?
-  `).get(req.params.id);
+    WHERE listings.id = ? AND (listings.status = 'active' OR listings.user_id = ?)
+  `).get(req.params.id, req.user ? req.user.id : -1);
 
   if (!row) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   res.json({
@@ -193,13 +171,23 @@ router.get('/:id', (req, res) => {
 });
 
 // ---- Đăng tin mới (cần đăng nhập, có thể kèm nhiều ảnh/video) ----
-router.post('/', requireAuth, upload.array('media', 10), (req, res) => {
+router.post('/', requireAdmin, upload.array('media', 10), (req, res) => {
   const {
     listingType, category, title, description,
     price, priceUnit, address, bedrooms, bathrooms, area,
     province, ward, street, width, length,
     hasIncome, hasFurniture, hasElevator, carAlley, isVip
   } = req.body;
+
+  const bad = checkFields(req.body, {
+    listingType: [10, 'Loại tin'], category: [100, 'Danh mục'], title: [200, 'Tiêu đề'], description: [20000, 'Mô tả'],
+    priceUnit: [10, 'Đơn vị giá'], address: [300, 'Địa chỉ'], province: [100, 'Tỉnh/Thành phố'], ward: [100, 'Phường/Xã'], street: [150, 'Đường/Phố']
+  }) || checkNumbers(req.body, {
+    price: [0, 1e12, 'Giá'], area: [0, 1e7, 'Diện tích'], bedrooms: [0, 100, 'Số phòng ngủ'], bathrooms: [0, 100, 'Số phòng tắm'],
+    width: [0, 10000, 'Chiều ngang'], length: [0, 10000, 'Chiều dài']
+  });
+  if (bad) return res.status(400).json({ error: bad });
+  if (priceUnit && !['ty', 'trieu'].includes(priceUnit)) return res.status(400).json({ error: 'Đơn vị giá không hợp lệ.' });
 
   if (!listingType || !category || !title || !price || !address) {
     return res.status(400).json({ error: 'Vui lòng nhập đầy đủ loại tin, danh mục, tiêu đề, giá và địa chỉ.' });
@@ -255,7 +243,7 @@ router.post('/', requireAuth, upload.array('media', 10), (req, res) => {
 });
 
 // ---- Sửa tin (chỉ chủ tin) — ảnh/video mới gửi lên sẽ được THÊM VÀO, không xoá cái cũ ----
-router.put('/:id', requireAuth, upload.array('media', 10), (req, res) => {
+router.put('/:id', requireAdmin, upload.array('media', 10), (req, res) => {
   const existing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (existing.user_id !== req.user.id) {
@@ -268,6 +256,16 @@ router.put('/:id', requireAuth, upload.array('media', 10), (req, res) => {
     province, ward, street, width, length,
     hasIncome, hasFurniture, hasElevator, carAlley, isVip
   } = req.body;
+
+  const bad = checkFields(req.body, {
+    listingType: [10, 'Loại tin'], category: [100, 'Danh mục'], title: [200, 'Tiêu đề'], description: [20000, 'Mô tả'],
+    priceUnit: [10, 'Đơn vị giá'], address: [300, 'Địa chỉ'], province: [100, 'Tỉnh/Thành phố'], ward: [100, 'Phường/Xã'], street: [150, 'Đường/Phố']
+  }) || checkNumbers(req.body, {
+    price: [0, 1e12, 'Giá'], area: [0, 1e7, 'Diện tích'], bedrooms: [0, 100, 'Số phòng ngủ'], bathrooms: [0, 100, 'Số phòng tắm'],
+    width: [0, 10000, 'Chiều ngang'], length: [0, 10000, 'Chiều dài']
+  });
+  if (bad) return res.status(400).json({ error: bad });
+  if (priceUnit && !['ty', 'trieu'].includes(priceUnit)) return res.status(400).json({ error: 'Đơn vị giá không hợp lệ.' });
 
   const files = req.files || [];
 
@@ -333,7 +331,7 @@ router.put('/:id', requireAuth, upload.array('media', 10), (req, res) => {
 });
 
 // ---- Xoá 1 ảnh/video cụ thể khỏi tin (chỉ chủ tin) ----
-router.delete('/:id/media/:mediaId', requireAuth, (req, res) => {
+router.delete('/:id/media/:mediaId', requireAdmin, (req, res) => {
   const listing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
   if (!listing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (listing.user_id !== req.user.id) {
@@ -360,7 +358,7 @@ router.delete('/:id/media/:mediaId', requireAuth, (req, res) => {
 });
 
 // ---- Xoá tin (chỉ chủ tin) ----
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   const existing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (existing.user_id !== req.user.id) {

@@ -1,33 +1,18 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
+const { create: createUpload } = require('../middleware/upload');
+const { checkFields, checkNumbers, idParam } = require('../lib/validate');
 
 const router = express.Router();
 
 const VALID_CATEGORIES = ['tin-tuc', 'tu-van-luat', 'thiet-ke-kien-truc'];
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const upload = createUpload({ prefix: 'news', maxFileSize: 5 * 1024 * 1024 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
-    cb(null, `news-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = /jpeg|jpg|png|webp/.test(file.mimetype);
-    cb(ok ? null : new Error('Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.'), ok);
-  }
-});
+router.param('id', idParam);
 
 function toPublicNews(row) {
   return {
@@ -86,8 +71,10 @@ router.get('/:id', (req, res) => {
 });
 
 // ---- Đăng bài mới ----
-router.post('/', requireAuth, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), (req, res) => {
   const { title, excerpt, content, category } = req.body;
+  const bad = checkFields(req.body, { title: [200, 'Tiêu đề'], excerpt: [500, 'Tóm tắt'], content: [50000, 'Nội dung'], category: [50, 'Danh mục'] });
+  if (bad) return res.status(400).json({ error: bad });
   if (!title || !content) {
     return res.status(400).json({ error: 'Vui lòng nhập tiêu đề và nội dung bài viết.' });
   }
@@ -109,11 +96,13 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Sửa bài ----
-router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
+router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
   const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
   const { title, excerpt, content, category } = req.body;
+  const bad = checkFields(req.body, { title: [200, 'Tiêu đề'], excerpt: [500, 'Tóm tắt'], content: [50000, 'Nội dung'], category: [50, 'Danh mục'] });
+  if (bad) return res.status(400).json({ error: bad });
 
   let imagePath = existing.image_path;
   if (req.file) {
@@ -144,7 +133,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Xoá bài ----
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 

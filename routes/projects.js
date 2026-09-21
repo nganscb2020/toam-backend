@@ -1,31 +1,16 @@
 const express = require('express');
-const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAdmin } = require('../middleware/auth');
+const { create: createUpload } = require('../middleware/upload');
+const { checkFields, checkNumbers, idParam } = require('../lib/validate');
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const upload = createUpload({ prefix: 'project', maxFileSize: 5 * 1024 * 1024 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
-    cb(null, `project-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
-  }
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = /jpeg|jpg|png|webp/.test(file.mimetype);
-    cb(ok ? null : new Error('Chỉ chấp nhận ảnh JPG, PNG hoặc WEBP.'), ok);
-  }
-});
+router.param('id', idParam);
 
 function toPublicProject(row) {
   return {
@@ -70,8 +55,10 @@ router.get('/:id', (req, res) => {
 });
 
 // ---- Đăng dự án mới ----
-router.post('/', requireAuth, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), (req, res) => {
   const { name, location, description } = req.body;
+  const bad = checkFields(req.body, { name: [200, 'Tên dự án'], location: [300, 'Vị trí'], description: [20000, 'Mô tả'] });
+  if (bad) return res.status(400).json({ error: bad });
   if (!name) {
     return res.status(400).json({ error: 'Vui lòng nhập tên dự án.' });
   }
@@ -92,11 +79,13 @@ router.post('/', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Sửa dự án ----
-router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
+router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
   const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy dự án.' });
 
   const { name, location, description } = req.body;
+  const bad = checkFields(req.body, { name: [200, 'Tên dự án'], location: [300, 'Vị trí'], description: [20000, 'Mô tả'] });
+  if (bad) return res.status(400).json({ error: bad });
 
   let imagePath = existing.image_path;
   if (req.file) {
@@ -126,7 +115,7 @@ router.put('/:id', requireAuth, upload.single('image'), (req, res) => {
 });
 
 // ---- Xoá dự án ----
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy dự án.' });
 

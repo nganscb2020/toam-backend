@@ -123,6 +123,7 @@
     .footer-grid{ grid-template-columns: 1fr 1fr; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -308,16 +309,16 @@
     if (l.bathrooms) factsExtra.push(`<span>🚿 <b>${l.bathrooms}</b> WC</span>`);
     return `
       <a class="listing-row" href="listing.html?id=${l.id}">
-        <div class="thumb"><img src="${l.imagePath || FALLBACK_IMG}" alt="${l.title}" loading="lazy"></div>
+        <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}" loading="lazy"></div>
         <div>
-          <div class="lr-title">${l.title}</div>
-          <div class="lr-date">📅 ${fmtDate(l.createdAt)} &nbsp;•&nbsp; ${l.category}</div>
-          <div class="lr-desc">${(l.description || 'Liên hệ để biết thêm chi tiết về bất động sản này.').slice(0,150)}${(l.description||'').length > 150 ? '…' : ''}</div>
+          <div class="lr-title">${esc(l.title)}</div>
+          <div class="lr-date">📅 ${fmtDate(l.createdAt)} &nbsp;•&nbsp; ${esc(l.category)}</div>
+          <div class="lr-desc">${esc((l.description || 'Liên hệ để biết thêm chi tiết về bất động sản này.').slice(0,150))}${(l.description||'').length > 150 ? '…' : ''}</div>
           <div class="lr-facts">
             <span class="price">Giá: <b>${fmtPrice(l)}</b></span>
             <span>Diện tích: <b>${l.area ? l.area + ' m²' : '—'}</b></span>
             ${factsExtra.join('')}
-            <span>📍 <b>${l.address}</b></span>
+            <span>📍 <b>${esc(l.address)}</b></span>
           </div>
         </div>
       </a>

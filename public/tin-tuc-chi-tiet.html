@@ -127,6 +127,7 @@
     .article-body{ padding: 18px; }
   }
 </style>
+<script src="/js/safe.js"></script>
 </head>
 <body>
 
@@ -296,7 +297,7 @@
       if (!res.ok){ renderNotFound(); return; }
       const data = await res.json();
       const n = data.news;
-      document.title = `${n.title} — Tổ Ấm`;
+      document.title = `${esc(n.title)} — Tổ Ấm`;
 
       const catInfo = CATEGORY_LABELS[n.category] || CATEGORY_LABELS['tin-tuc'];
       document.getElementById('breadcrumbCategory').innerHTML = `<a href="${catInfo.anchor}">${catInfo.name}</a>`;
@@ -305,14 +306,14 @@
       document.getElementById('articleContainer').innerHTML = `
         <div class="article-grid">
           <div class="article-main">
-            ${n.imagePath ? `<div class="article-cover"><img src="${n.imagePath}" alt="${n.title}"></div>` : ''}
+            ${n.imagePath ? `<div class="article-cover"><img src="${esc(n.imagePath)}" alt="${esc(n.title)}"></div>` : ''}
             <div class="article-body">
-              <h1>${n.title}</h1>
+              <h1>${esc(n.title)}</h1>
               <div class="article-meta">
                 <span>📅 ${fmtDate(n.createdAt)}</span>
-                <span>✍️ ${n.authorName || 'Tổ Ấm'}</span>
+                <span>✍️ ${esc(n.authorName || 'Tổ Ấm')}</span>
               </div>
-              <div class="article-content">${n.content}</div>
+              <div class="article-content">${esc(n.content)}</div>
             </div>
           </div>
           <aside>
@@ -343,8 +344,8 @@
       if (!items.length){ el.innerHTML = '<div class="grid-status">Chưa có bài viết khác.</div>'; return; }
       el.innerHTML = items.map(n => `
         <a class="side-news-item" href="tin-tuc-chi-tiet.html?id=${n.id}">
-          <div class="thumb"><img src="${n.imagePath || NEWS_FALLBACK_IMG}" alt=""></div>
-          <div class="title">${n.title}</div>
+          <div class="thumb"><img src="${esc(n.imagePath || NEWS_FALLBACK_IMG)}" alt=""></div>
+          <div class="title">${esc(n.title)}</div>
         </a>
       `).join('');
     } catch(e){ /* im lặng bỏ qua */ }
