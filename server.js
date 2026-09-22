@@ -148,6 +148,13 @@ function absoluteImage(req, imagePath, fallback) {
   return /^https?:\/\//i.test(imagePath) ? imagePath : absoluteUrl(req, imagePath);
 }
 
+// Kiểu ảnh thật theo đuôi file — để không khai sai với Zalo/Facebook (trước đây từng khai cứng kích
+// thước 1200x630 cho mọi ảnh dù ảnh thật to nhỏ khác nhau, có thể khiến một số nơi từ chối hiển thị ảnh).
+function imageType(imagePath) {
+  const ext = path.extname(imagePath || '').toLowerCase();
+  return { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp' }[ext] || null;
+}
+
 // Link cũ kiểu /listing.html?id=2 → chuyển vĩnh viễn (301) sang địa chỉ đẹp, link đã chia sẻ vẫn dùng được
 app.use((req, res, next) => {
   const d = OLD_PAGES[req.path];
@@ -240,6 +247,7 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
       title: `${title} — ${SITE_NAME}`,
       description: d.describe(row),
       image: absoluteImage(req, row.image_path, d.fallbackImage),
+      imageType: row.image_path ? imageType(row.image_path) : 'image/jpeg', // ảnh mặc định (Unsplash) luôn là JPEG
       url: absoluteUrl(req, req.originalUrl),
       type: d.type
     });

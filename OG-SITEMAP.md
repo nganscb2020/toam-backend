@@ -10,6 +10,10 @@ Giờ khi có người bấm vào link `/bat-dong-san/...`, `/sang-nhuong/...`, 
 - **Mô tả**: với tin mua bán/thuê/sang nhượng là giá + diện tích + địa chỉ + vài dòng mô tả; với tin tức là đoạn tóm tắt hoặc đầu bài viết.
 - **Tin đang ẩn (`status = 'hidden'`)**: trang trả về "không tìm thấy", không tạo thẻ chia sẻ cho tin đó.
 
+**Nếu Zalo không hiện ảnh dù Facebook hiện được:** hai nơi này đọc cùng một loại thẻ nhưng Zalo có vẻ khắt khe hơn với ảnh. Một nguyên nhân mình từng mắc: bản đầu tiên khai cứng kích thước ảnh là 1200×630 cho mọi tin, dù ảnh thật to nhỏ khác nhau — Facebook bỏ qua chỗ sai này, nhưng có thể vài nơi khác thì không. Bản hiện tại đã bỏ chỗ khai sai đó. Nếu vẫn không thấy ảnh:
+- Zalo có lưu tạm bản xem trước, nên nếu bạn từng gửi đúng link đó trước khi mình sửa lỗi, hãy thử gửi lại sau vài chục phút, hoặc thử với một tin khác chưa từng gửi qua Zalo.
+- Kiểm tra ảnh có mở được trực tiếp không: dán link ảnh (bấm chuột phải vào ảnh trên trang tin, chọn "Sao chép địa chỉ hình ảnh") vào một tab mới, xem có hiện ảnh bình thường không.
+
 **Cách kiểm tra sau khi đưa lên Render:** dùng công cụ xem trước của Facebook tại https://developers.facebook.com/tools/debug/ hoặc Zalo, dán link một tin đăng vào (ví dụ `https://toam-bds.onrender.com/bat-dong-san/...`). Nếu vẫn thấy dữ liệu cũ, đó là do Facebook/Zalo lưu cache link — bấm "Scrape Again"/"Lấy lại thông tin" trong công cụ đó.
 
 ## sitemap.xml — giúp Google tìm ra hết các trang
