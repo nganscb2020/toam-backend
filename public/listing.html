@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Chi tiết tin đăng — Tổ Ấm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -333,7 +334,7 @@
 <script>
   const API = '/api';
   const FALLBACK_IMG = 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=70';
-  const id = new URLSearchParams(window.location.search).get('id');
+  const id = getDetailId();
 
   function fmtPrice(l){
     const n = Number(l.price);
@@ -458,7 +459,7 @@
   function simCardHTML(l){
     const typeLabel = l.listingType === 'rent' ? 'Cho thuê' : 'Bán';
     return `
-      <a class="sim-card" href="listing.html?id=${l.id}">
+      <a class="sim-card" href="${detailUrl('listing', l)}">
         <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}" loading="lazy"></div>
         <div class="info">
           <div class="title">${esc(l.title)}</div>

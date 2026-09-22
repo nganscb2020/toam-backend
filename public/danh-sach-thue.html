@@ -308,7 +308,7 @@
     if (l.bedrooms) factsExtra.push(`<span>🛏 <b>${l.bedrooms}</b> phòng ngủ</span>`);
     if (l.bathrooms) factsExtra.push(`<span>🚿 <b>${l.bathrooms}</b> WC</span>`);
     return `
-      <a class="listing-row" href="listing.html?id=${l.id}">
+      <a class="listing-row" href="${detailUrl('listing', l)}">
         <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}" loading="lazy"></div>
         <div>
           <div class="lr-title">${esc(l.title)}</div>

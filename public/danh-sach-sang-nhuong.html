@@ -305,7 +305,7 @@
 
   function transferRowHTML(t){
     return `
-      <a class="listing-row" href="sang-nhuong-chi-tiet.html?id=${t.id}">
+      <a class="listing-row" href="${detailUrl('transfer', t)}">
         <div class="thumb"><img src="${esc(t.imagePath || FALLBACK_IMG)}" alt="${esc(t.title)}" loading="lazy"></div>
         <div>
           <div class="lr-title">${esc(t.title)}</div>

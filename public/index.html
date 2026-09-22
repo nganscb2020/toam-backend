@@ -847,7 +847,7 @@
   /* ===== Tin rao nổi bật — carousel dùng chung cho nhiều khối trên trang ===== */
   function hotCardHTML(l){
     return `
-      <a class="hot-card" href="listing.html?id=${l.id}">
+      <a class="hot-card" href="${detailUrl('listing', l)}">
         <div class="thumb">
           <span class="hot-badge">HOT</span>
           <img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}">
@@ -907,7 +907,7 @@
     if (l.bedrooms) factsExtra.push(`<span>🛏 <b>${l.bedrooms}</b> phòng ngủ</span>`);
     if (l.bathrooms) factsExtra.push(`<span>🚿 <b>${l.bathrooms}</b> WC</span>`);
     return `
-      <a class="listing-row" href="listing.html?id=${l.id}">
+      <a class="listing-row" href="${detailUrl('listing', l)}">
         <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt="${esc(l.title)}" loading="lazy"></div>
         <div>
           <div class="lr-title">${esc(l.title)}</div>
@@ -1077,7 +1077,7 @@
   /* ===== Sidebar: Tin nổi bật (tin mới nhất) / Tin VIP (do admin tự đánh dấu) ===== */
   function sideItemHTML(l){
     return `
-      <a class="side-item" href="listing.html?id=${l.id}">
+      <a class="side-item" href="${detailUrl('listing', l)}">
         <div class="thumb"><img src="${esc(l.imagePath || FALLBACK_IMG)}" alt=""></div>
         <div>
           <div class="t">${esc(l.title)}</div>
@@ -1198,7 +1198,7 @@
         return;
       }
       el.innerHTML = data.projects.map(p => `
-        <a class="project-card" href="du-an-chi-tiet.html?id=${p.id}">
+        <a class="project-card" href="${detailUrl('project', p)}">
           <div class="thumb"><img src="${esc(p.imagePath || PROJECT_FALLBACK_IMG)}" alt="${esc(p.name)}"></div>
           <div class="band">${esc(p.name)}</div>
           <p>${esc((p.description || 'Xem chi tiết dự án').slice(0,110))}${(p.description||'').length > 110 ? '…' : ''}</p>
@@ -1220,7 +1220,7 @@
         return;
       }
       el.innerHTML = data.news.map(n => `
-        <li><a href="tin-tuc-chi-tiet.html?id=${n.id}">${esc(n.title)}</a></li>
+        <li><a href="${detailUrl('news', n)}">${esc(n.title)}</a></li>
       `).join('');
     } catch(e){
       el.innerHTML = '<li style="padding:8px 0; color:var(--ink-soft); font-size:0.84rem;">Không tải được.</li>';
@@ -1250,7 +1250,7 @@
       }
       const [featured, ...rest] = data.news;
       const listHTML = rest.slice(0, 5).map(n => `
-        <a class="news-list-item" href="tin-tuc-chi-tiet.html?id=${n.id}">
+        <a class="news-list-item" href="${detailUrl('news', n)}">
           <div class="thumb"><img src="${esc(n.imagePath || NEWS_FALLBACK_IMG)}" alt=""></div>
           <div class="title">${esc(n.title)}</div>
         </a>
@@ -1258,7 +1258,7 @@
 
       el.innerHTML = `
         <div class="news-block">
-          <a class="news-featured" href="tin-tuc-chi-tiet.html?id=${featured.id}">
+          <a class="news-featured" href="${detailUrl('news', featured)}">
             <div class="thumb">
               <img src="${esc(featured.imagePath || NEWS_FALLBACK_IMG)}" alt="${esc(featured.title)}">
             </div>

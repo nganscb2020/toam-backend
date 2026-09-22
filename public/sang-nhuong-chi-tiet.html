@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sang nhượng — Tổ Ấm</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -265,7 +266,7 @@
 <script>
   const API = '/api';
   const FALLBACK_IMG = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=70';
-  const id = new URLSearchParams(window.location.search).get('id');
+  const id = getDetailId();
 
   function fmtPrice(t){
     if (!t.price) return 'Liên hệ';
@@ -345,7 +346,7 @@
       const el = document.getElementById('otherTransfers');
       if (!items.length){ el.innerHTML = '<div class="grid-status">Chưa có tin khác.</div>'; return; }
       el.innerHTML = items.map(t => `
-        <a class="side-item" href="sang-nhuong-chi-tiet.html?id=${t.id}">
+        <a class="side-item" href="${detailUrl('transfer', t)}">
           <div class="thumb"><img src="${esc(t.imagePath || FALLBACK_IMG)}" alt=""></div>
           <div class="title">${esc(t.title)}</div>
         </a>

@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Nạp middleware/auth sớm để kiểm tra JWT_SECRET ngay khi khởi động (thiếu/yếu → báo lỗi rõ ràng)
 require('./middleware/auth');
@@ -17,6 +18,9 @@ const transferRoutes = require('./routes/transfers');
 const contactRoutes = require('./routes/contact');
 const { normalizeQuery } = require('./lib/validate');
 const { csrfGuard } = require('./middleware/csrf');
+const { slugPath } = require('./lib/slug');
+const { injectMeta, toDescription } = require('./lib/meta');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,7 +31,11 @@ const isProd = process.env.NODE_ENV === 'production';
 // TRUST_PROXY = số lớp proxy phía trước (Render: 1; Cloudflare + Render: 2). Chạy máy local: bỏ trống.
 const trustProxy = process.env.TRUST_PROXY !== undefined ? Number(process.env.TRUST_PROXY) : (isProd ? 1 : 0);
 app.set('trust proxy', Number.isFinite(trustProxy) ? trustProxy : 0);
+
+// Dùng bộ đọc query string đơn giản (không qua thư viện `qs`): site chỉ dùng tham số phẳng dạng ?a=1&b=2,
+// nên không cần đọc kiểu lồng nhau ?a[b]=1 — bỏ luôn bề mặt tấn công của qs.
 app.set('query parser', 'simple');
+
 // ---- Header bảo mật (helmet) + Content-Security-Policy ----
 // Trang hiện dùng script/style viết trực tiếp trong HTML nên tạm cho phép 'unsafe-inline';
 // vẫn chặn: script từ nguồn ngoài, gửi dữ liệu ra ngoài (connect-src), nhúng trang vào iframe (clickjacking),
@@ -90,6 +98,67 @@ app.use((req, res, next) => {
   next();
 });
 
+// ---- Đường dẫn đẹp cho trang chi tiết: /bat-dong-san/ban-can-ho-quan-4-2 (số cuối là mã tin) ----
+// Bảng/cột được cố định trong mã (không lấy từ người dùng) nên câu truy vấn an toàn.
+// fallbackImage: ảnh dùng khi tin không có ảnh riêng, để link chia sẻ vẫn có hình thay vì trống.
+const SITE_NAME = 'Tổ Ấm';
+const DETAIL = {
+  'bat-dong-san': {
+    file: 'listing.html', table: 'listings', titleCol: 'title', type: 'product',
+    fallbackImage: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=1200&q=70',
+    activeOnly: true,
+    describe: (row) => {
+      const gia = row.price ? `${row.price} ${row.price_unit === 'ty' ? 'tỷ' : 'triệu'}` : 'Liên hệ';
+      const dt = row.area ? `, ${row.area}m²` : '';
+      return toDescription(`${gia}${dt} — ${row.address || ''}. ${row.description || ''}`);
+    }
+  },
+  'sang-nhuong': {
+    file: 'sang-nhuong-chi-tiet.html', table: 'transfers', titleCol: 'title', type: 'product',
+    fallbackImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=70',
+    describe: (row) => {
+      const gia = row.price ? `${row.price} ${row.price_unit === 'ty' ? 'tỷ' : 'triệu'}` : 'Liên hệ';
+      return toDescription(`${gia} — ${row.address || ''}. ${row.description || ''}`);
+    }
+  },
+  'du-an': {
+    file: 'du-an-chi-tiet.html', table: 'projects', titleCol: 'name', type: 'website',
+    fallbackImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=70',
+    describe: (row) => toDescription(`${row.location ? row.location + '. ' : ''}${row.description || ''}`)
+  },
+  'tin-tuc': {
+    file: 'tin-tuc-chi-tiet.html', table: 'news', titleCol: 'title', type: 'article',
+    fallbackImage: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=70',
+    describe: (row) => toDescription(row.excerpt || row.content)
+  }
+};
+const OLD_PAGES = Object.fromEntries(Object.entries(DETAIL).map(([section, d]) => ['/' + d.file, { section, ...d }]));
+
+function findDetailRow(d, id) {
+  const activeClause = d.activeOnly ? "AND status = 'active'" : '';
+  return db.prepare(`SELECT * FROM ${d.table} WHERE id = ? ${activeClause}`).get(id) || null;
+}
+
+function absoluteUrl(req, req_path) {
+  return `${req.protocol}://${req.get('host')}${req_path}`;
+}
+
+function absoluteImage(req, imagePath, fallback) {
+  if (!imagePath) return fallback;
+  return /^https?:\/\//i.test(imagePath) ? imagePath : absoluteUrl(req, imagePath);
+}
+
+// Link cũ kiểu /listing.html?id=2 → chuyển vĩnh viễn (301) sang địa chỉ đẹp, link đã chia sẻ vẫn dùng được
+app.use((req, res, next) => {
+  const d = OLD_PAGES[req.path];
+  const id = req.query.id;
+  if (req.method === 'GET' && d && typeof id === 'string' && /^\d{1,12}$/.test(id)) {
+    const row = findDetailRow(d, id);
+    if (row) return res.redirect(301, `/${d.section}/${slugPath(row[d.titleCol], id)}`);
+  }
+  next();
+});
+
 // Phục vụ file tĩnh (giao diện + ảnh đã tải lên)
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'ignore',
@@ -120,6 +189,63 @@ app.use('/api/contact', contactLimiter, contactRoutes);
 
 // API không tồn tại → 404 dạng JSON (không rơi xuống trang chủ)
 app.use('/api', (req, res) => res.status(404).json({ error: 'Không tìm thấy.' }));
+
+// ---- sitemap.xml: liệt kê mọi trang tĩnh + mọi tin/dự án/tin tức đang công khai, để Google thu thập dữ liệu ----
+const STATIC_PAGES = ['/', '/danh-sach-ban.html', '/danh-sach-thue.html', '/danh-sach-sang-nhuong.html', '/gioi-thieu.html'];
+
+app.get('/sitemap.xml', (req, res) => {
+  const base = absoluteUrl(req, '');
+  const urls = [...STATIC_PAGES];
+
+  for (const [section, d] of Object.entries(DETAIL)) {
+    const activeClause = d.activeOnly ? "WHERE status = 'active'" : '';
+    const rows = db.prepare(`SELECT id, ${d.titleCol} AS t FROM ${d.table} ${activeClause}`).all();
+    for (const row of rows) urls.push(`/${section}/${slugPath(row.t, row.id)}`);
+  }
+
+  const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map(u => `  <url><loc>${base}${u}</loc></url>`).join('\n') +
+    `\n</urlset>\n`;
+  res.set('Content-Type', 'application/xml; charset=utf-8').send(body);
+});
+
+// robots.txt: cho phép thu thập toàn trang, trỏ tới sitemap; chặn riêng khu vực quản trị
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(
+    `User-agent: *\nDisallow: /admin.html\nSitemap: ${absoluteUrl(req, '/sitemap.xml')}\n`
+  );
+});
+
+// Trang chi tiết với địa chỉ đẹp: cùng một file HTML, trang tự đọc mã tin ở cuối địa chỉ
+app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, next) => {
+  const d = DETAIL[req.params.section];
+  const m = /^(?:.*-)?(\d{1,12})$/.exec(req.params.slug);
+  if (!d || !m) return next();
+
+  const id = m[1];
+  const page = path.join(__dirname, 'public', d.file);
+  const row = findDetailRow(d, id);
+  if (!row) return res.status(404).sendFile(page); // không có tin này (hoặc đang ẩn) → trang tự báo "không tìm thấy"
+
+  const title = row[d.titleCol];
+  // Tiêu đề đã đổi hoặc gõ sai phần chữ → chuyển về địa chỉ chuẩn (1 địa chỉ duy nhất cho mỗi tin, tốt cho Google)
+  const canonical = slugPath(title, id);
+  if (req.params.slug !== canonical) return res.redirect(301, `/${req.params.section}/${canonical}`);
+
+  // Chèn thẻ Open Graph/Twitter trước khi gửi trang, để Zalo/Facebook hiện ảnh + tiêu đề đúng của tin này
+  // (các mạng xã hội đọc HTML thô, không chạy JavaScript của trang).
+  fs.readFile(page, 'utf8', (err, html) => {
+    if (err) return next(err);
+    const html2 = injectMeta(html, {
+      title: `${title} — ${SITE_NAME}`,
+      description: d.describe(row),
+      image: absoluteImage(req, row.image_path, d.fallbackImage),
+      url: absoluteUrl(req, req.originalUrl),
+      type: d.type
+    });
+    res.set('Content-Type', 'text/html; charset=utf-8').send(html2);
+  });
+});
 
 // Mọi đường dẫn khác không phải file (không có đuôi mở rộng) → trang chủ; còn lại 404
 app.get('*', (req, res) => {
