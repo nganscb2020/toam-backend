@@ -379,6 +379,8 @@
         ? l.media
         : (l.imagePath ? [{ type: 'image', path: l.imagePath }] : [{ type: 'image', path: FALLBACK_IMG }]);
 
+      // Nếu máy chủ đã dựng sẵn nội dung (data-ssr="1"), không ghi đè lại — đỡ tải trùng, đỡ giật hình.
+      if (!document.getElementById('detailContainer').dataset.ssr)
       document.getElementById('detailContainer').innerHTML = `
         <div class="detail-grid">
           <div class="detail-main">

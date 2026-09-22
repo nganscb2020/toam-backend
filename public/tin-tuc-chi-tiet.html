@@ -304,6 +304,7 @@
       document.getElementById('breadcrumbCategory').innerHTML = `<a href="${catInfo.anchor}">${catInfo.name}</a>`;
       document.getElementById('breadcrumbTitle').textContent = n.title;
 
+      if (!document.getElementById('articleContainer').dataset.ssr)
       document.getElementById('articleContainer').innerHTML = `
         <div class="article-grid">
           <div class="article-main">

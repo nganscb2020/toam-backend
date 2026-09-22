@@ -297,6 +297,7 @@
       document.title = `${esc(t.title)} — Tổ Ấm`;
       document.getElementById('breadcrumbTitle').textContent = t.title;
 
+      if (!document.getElementById('detailContainer').dataset.ssr)
       document.getElementById('detailContainer').innerHTML = `
         <div class="detail-grid">
           <div class="detail-main">

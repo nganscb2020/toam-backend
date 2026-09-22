@@ -20,6 +20,8 @@ const { normalizeQuery } = require('./lib/validate');
 const { csrfGuard } = require('./middleware/csrf');
 const { slugPath } = require('./lib/slug');
 const { injectMeta, toDescription } = require('./lib/meta');
+const schema = require('./lib/schema');
+const ssr = require('./lib/ssr');
 const db = require('./db');
 
 const app = express();
@@ -111,7 +113,28 @@ const DETAIL = {
       const gia = row.price ? `${row.price} ${row.price_unit === 'ty' ? 'tỷ' : 'triệu'}` : 'Liên hệ';
       const dt = row.area ? `, ${row.area}m²` : '';
       return toDescription(`${gia}${dt} — ${row.address || ''}. ${row.description || ''}`);
-    }
+    },
+    breadcrumb: (row) => {
+      const typeLabel = row.listing_type === 'rent' ? 'Cho thuê' : 'Bán';
+      return [`${typeLabel} ${(row.category || '').toLowerCase()}`];
+    },
+    buildSchema: (row, opts) => schema.realEstateListingSchema(row, { ...opts, isRent: row.listing_type === 'rent' }),
+    containerId: 'detailContainer',
+    fetchDetail: (id) => {
+      const row = db.prepare(`
+        SELECT listings.*, users.name AS owner_name FROM listings
+        JOIN users ON users.id = listings.user_id
+        WHERE listings.id = ? AND listings.status = 'active'
+      `).get(id);
+      if (!row) return null;
+      row.media = db.prepare(`
+        SELECT media_type AS type, file_path AS path FROM listing_media
+        WHERE listing_id = ? ORDER BY sort_order ASC, id ASC
+      `).all(id);
+      return row;
+    },
+    renderBody: (row) => ssr.renderListingBody(row, row.media),
+    breadcrumbSpans: (row) => ({ breadcrumbType: ssr.listingBreadcrumbType(row), breadcrumbTitle: ssr.esc(row.title) })
   },
   'sang-nhuong': {
     file: 'sang-nhuong-chi-tiet.html', table: 'transfers', titleCol: 'title', type: 'product',
@@ -119,17 +142,43 @@ const DETAIL = {
     describe: (row) => {
       const gia = row.price ? `${row.price} ${row.price_unit === 'ty' ? 'tỷ' : 'triệu'}` : 'Liên hệ';
       return toDescription(`${gia} — ${row.address || ''}. ${row.description || ''}`);
-    }
+    },
+    breadcrumb: (row) => [row.category || 'Sang nhượng'],
+    buildSchema: (row, opts) => schema.realEstateListingSchema(row, opts),
+    containerId: 'detailContainer',
+    fetchDetail: (id) => db.prepare(`
+      SELECT transfers.*, users.name AS owner_name FROM transfers
+      JOIN users ON users.id = transfers.user_id
+      WHERE transfers.id = ?
+    `).get(id) || null,
+    renderBody: (row) => ssr.renderTransferBody(row),
+    breadcrumbSpans: (row) => ({ breadcrumbTitle: ssr.esc(row.title) })
   },
   'du-an': {
     file: 'du-an-chi-tiet.html', table: 'projects', titleCol: 'name', type: 'website',
     fallbackImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200&q=70',
-    describe: (row) => toDescription(`${row.location ? row.location + '. ' : ''}${row.description || ''}`)
+    describe: (row) => toDescription(`${row.location ? row.location + '. ' : ''}${row.description || ''}`),
+    breadcrumb: () => ['Dự án'],
+    buildSchema: (row, opts) => schema.apartmentComplexSchema(row, opts),
+    containerId: 'projectContainer',
+    fetchDetail: (id) => db.prepare('SELECT * FROM projects WHERE id = ?').get(id) || null,
+    renderBody: (row) => ssr.renderProjectBody(row),
+    breadcrumbSpans: (row) => ({ breadcrumbTitle: ssr.esc(row.name) })
   },
   'tin-tuc': {
     file: 'tin-tuc-chi-tiet.html', table: 'news', titleCol: 'title', type: 'article',
     fallbackImage: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=1200&q=70',
-    describe: (row) => toDescription(row.excerpt || row.content)
+    describe: (row) => toDescription(row.excerpt || row.content),
+    breadcrumb: () => ['Tin tức'],
+    buildSchema: (row, opts) => schema.articleSchema(row, { ...opts, siteName: SITE_NAME }),
+    containerId: 'articleContainer',
+    fetchDetail: (id) => db.prepare(`
+      SELECT news.*, users.name AS owner_name FROM news
+      JOIN users ON users.id = news.user_id
+      WHERE news.id = ?
+    `).get(id) || null,
+    renderBody: (row) => ssr.renderArticleBody(row),
+    breadcrumbSpans: (row) => ({ breadcrumbCategory: ssr.articleBreadcrumbCategory(row), breadcrumbTitle: ssr.esc(row.title) })
   }
 };
 const OLD_PAGES = Object.fromEntries(Object.entries(DETAIL).map(([section, d]) => ['/' + d.file, { section, ...d }]));
@@ -231,7 +280,7 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
 
   const id = m[1];
   const page = path.join(__dirname, 'public', d.file);
-  const row = findDetailRow(d, id);
+  const row = d.fetchDetail(id);
   if (!row) return res.status(404).sendFile(page); // không có tin này (hoặc đang ẩn) → trang tự báo "không tìm thấy"
 
   const title = row[d.titleCol];
@@ -239,18 +288,39 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
   const canonical = slugPath(title, id);
   if (req.params.slug !== canonical) return res.redirect(301, `/${req.params.section}/${canonical}`);
 
-  // Chèn thẻ Open Graph/Twitter trước khi gửi trang, để Zalo/Facebook hiện ảnh + tiêu đề đúng của tin này
-  // (các mạng xã hội đọc HTML thô, không chạy JavaScript của trang).
+  // Dựng sẵn cả thẻ chia sẻ (Open Graph/Twitter) LẪN nội dung chính của trang (ảnh, giá, mô tả...)
+  // ngay trong HTML gửi về — để Google và Zalo/Facebook đọc được ngay, không phải chờ JavaScript
+  // chạy xong mới có nội dung.
   fs.readFile(page, 'utf8', (err, html) => {
     if (err) return next(err);
-    const html2 = injectMeta(html, {
+    const image = absoluteImage(req, row.image_path, d.fallbackImage);
+    const url = absoluteUrl(req, `/${req.params.section}/${canonical}`); // URL chuẩn, không kèm query string vãng lai
+
+    const crumbLabels = d.breadcrumb(row); // 1 hoặc nhiều mục ở giữa, giữa "Trang chủ" và tiêu đề tin
+    const breadcrumb = schema.breadcrumbSchema([
+      { name: SITE_NAME, url: absoluteUrl(req, '/') },
+      ...crumbLabels.map(name => ({ name })),
+      { name: title }
+    ]);
+
+    let html2 = injectMeta(html, {
       title: `${title} — ${SITE_NAME}`,
       description: d.describe(row),
-      image: absoluteImage(req, row.image_path, d.fallbackImage),
+      image,
       imageType: row.image_path ? imageType(row.image_path) : 'image/jpeg', // ảnh mặc định (Unsplash) luôn là JPEG
-      url: absoluteUrl(req, req.originalUrl),
-      type: d.type
+      url,
+      type: d.type,
+      jsonLd: [d.buildSchema(row, { url, image }), breadcrumb]
     });
+
+    // Nếu cấu trúc trang không khớp như mong đợi (ai đó sửa file HTML sau này), injectBody trả về null
+    // và ta GIỮ NGUYÊN bản gốc — thà thiếu phần dựng sẵn còn hơn gửi ra trang bị lỗi.
+    const withBody = ssr.injectBody(html2, d.containerId, d.renderBody(row));
+    if (withBody) html2 = withBody;
+    for (const [spanId, innerHtml] of Object.entries(d.breadcrumbSpans(row))) {
+      html2 = ssr.injectSpan(html2, spanId, innerHtml);
+    }
+
     res.set('Content-Type', 'text/html; charset=utf-8').send(html2);
   });
 });
