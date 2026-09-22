@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<base href="/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tin tức — Tổ Ấm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red: #C1272D; --red-dark: #921E23; --red-bright: #E63946; --gold: #F0A202;
+    --ink: #232323; --ink-soft: #6E6E6E; --bg: #F2F1EC; --surface: #FFFFFF;
+    --line: #E7E4DB; --dark: #1B1B1B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ background: var(--bg); color: var(--ink); font-family:'Be Vietnam Pro', sans-serif; font-size: 15px; line-height: 1.5; }
+  img{max-width:100%; display:block;}
+  a{color:inherit; text-decoration:none;}
+  ul{list-style:none;}
+  button{font-family:inherit; cursor:pointer;}
+  .wrap{ max-width: 1240px; margin:0 auto; padding: 0 20px; }
+
+  /* ---------- Top bar / Header / Nav ---------- */
+  .top-bar{ background: var(--dark); color: #ddd; font-size: 0.82rem; }
+  .top-bar .wrap{ display:flex; align-items:center; justify-content:space-between; padding: 8px 20px; }
+  .top-bar .hotline{ display:flex; align-items:center; gap:8px; color:#fff; font-weight:600; }
+  .top-bar .hotline svg{ width:15px; height:15px; }
+  .top-bar .right-links{ display:flex; gap:20px; }
+  .top-bar .right-links a{ display:flex; align-items:center; gap:6px; color:#ccc; }
+  .top-bar .right-links a:hover{ color:#fff; }
+
+  header.main-header{ background: var(--surface); border-bottom: 1px solid var(--line); }
+  .header-row{ display:flex; align-items:center; justify-content:space-between; padding: 18px 20px; max-width: 1240px; margin:0 auto; }
+  .logo{ display:flex; align-items:center; gap:12px; }
+  .logo .mark{ width:52px; height:52px; border-radius:8px; background: var(--red); display:flex; align-items:center; justify-content:center; }
+  .logo .mark svg{ width:28px; height:28px; }
+  .logo .text .l1{ font-size:1.35rem; font-weight:800; color: var(--red); line-height:1; }
+  .logo .text .l2{ font-size:0.8rem; color: var(--ink-soft); }
+  .promo-banner{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; }
+  .promo-banner .tag{ color: var(--ink); }
+  .promo-banner .big{ color: var(--red-bright); font-size:1.6rem; }
+
+  nav.main-nav{ background: var(--red); }
+  nav.main-nav ul{ display:flex; max-width:1240px; margin:0 auto; }
+  nav.main-nav a{
+    display:flex; align-items:center; gap:6px; padding: 14px 20px;
+    color:#fff; font-weight:600; font-size:0.92rem;
+    border-right: 1px solid rgba(255,255,255,0.12); white-space: nowrap;
+  }
+  nav.main-nav li:first-child a{ background: var(--red-dark); }
+  nav.main-nav a:hover{ background: var(--red-dark); }
+  nav.main-nav li{ position: relative; }
+  .nav-dropdown{
+    position:absolute; top:100%; left:0; background: var(--dark); min-width: 220px; padding: 10px 0;
+    border-radius: 0 0 6px 6px; box-shadow: 0 16px 30px -12px rgba(0,0,0,0.5); display:none; z-index: 50;
+  }
+  nav.main-nav li:hover .nav-dropdown{ display:block; }
+  .nav-dropdown a{ display:flex; align-items:center; gap:8px; padding: 9px 20px; color:#ddd; font-weight:500; font-size:0.86rem; border-right:none; background:none; }
+  .nav-dropdown a::before{ content:"›"; color: var(--red-bright); font-weight:700; }
+  .nav-dropdown a:hover{ background: rgba(255,255,255,0.06); color:#fff; }
+  @media (max-width: 900px){ nav.main-nav ul{ overflow-x:auto; } }
+
+  /* ---------- Breadcrumb ---------- */
+  .breadcrumb{ padding: 16px 0; font-size:0.85rem; color: var(--ink-soft); }
+  .breadcrumb a:hover{ color: var(--red); }
+  .breadcrumb span{ margin: 0 6px; }
+
+  /* ---------- Bài viết ---------- */
+  .article-grid{ display:grid; grid-template-columns: 1.9fr 1fr; gap: 28px; align-items:start; }
+
+  .article-main{ background: var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .article-cover{ aspect-ratio: 16/8; overflow:hidden; }
+  .article-cover img{ width:100%; height:100%; object-fit:cover; }
+  .article-body{ padding: 26px 30px 34px; }
+  .article-body h1{ font-size:1.5rem; font-weight:800; line-height:1.4; margin-bottom:12px; }
+  .article-meta{ font-size:0.82rem; color: var(--ink-soft); margin-bottom:20px; display:flex; gap:16px; flex-wrap:wrap; }
+  .article-content{ font-size:0.98rem; color:#333; white-space: pre-line; line-height:1.75; }
+
+  /* ---------- Sidebar bài viết khác ---------- */
+  .side-box{ background: var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:22px; }
+  .side-box-head{ display:flex; align-items:center; gap:8px; padding: 12px 14px; border-bottom: 2px solid var(--red); }
+  .side-box-head .dot{ width:8px; height:20px; background: var(--red); border-radius:2px; }
+  .side-box-head h3{ font-size:0.92rem; font-weight:800; text-transform:uppercase; }
+  .side-news-item{ display:grid; grid-template-columns: 68px 1fr; gap:10px; padding: 12px 14px; border-bottom:1px solid var(--line); }
+  .side-news-item:last-child{ border-bottom:none; }
+  .side-news-item .thumb{ width:68px; height:54px; border-radius:4px; overflow:hidden; }
+  .side-news-item .thumb img{ width:100%; height:100%; object-fit:cover; }
+  .side-news-item .title{ font-size:0.82rem; font-weight:600; line-height:1.35; }
+  .side-news-item:hover .title{ color: var(--red); }
+
+  .contact-box{ background: var(--surface); border:1px solid var(--line); border-radius:8px; padding: 22px; }
+  .contact-box h3{ font-size:1rem; font-weight:700; margin-bottom:12px; }
+  .btn-call{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background: var(--red); color:#fff; border:none; border-radius:6px;
+    padding: 13px; font-weight:700; font-size:0.95rem; width:100%;
+  }
+  .btn-call:hover{ background: var(--red-dark); }
+
+  .grid-status{ text-align:center; padding:60px 20px; color: var(--ink-soft); font-size:0.9rem; }
+
+  /* ---------- Footer / Float call ---------- */
+  footer{ background: var(--dark); color:#b8b8b8; margin-top: 46px; padding-top: 40px; }
+  .footer-grid{ display:grid; grid-template-columns: repeat(4, 1fr); gap: 30px; padding-bottom: 34px; }
+  .footer-grid h4{ color:#fff; font-size:0.92rem; font-weight:700; margin-bottom:14px; }
+  .footer-grid li{ margin-bottom:9px; font-size:0.84rem; display:flex; align-items:center; gap:7px; }
+  .footer-grid li:hover{ color:#fff; }
+  .footer-bottom{ border-top: 1px solid rgba(255,255,255,0.12); padding: 20px; text-align:center; font-size: 0.82rem; }
+  .footer-bottom b{ color:#fff; }
+
+  .float-call{
+    position: fixed; left: 22px; bottom: 22px; z-index: 100; height:56px; border-radius:999px; background: var(--red-bright); color:#fff; display:flex; align-items:center; gap:10px; padding: 0 20px 0 16px; box-shadow: 0 10px 24px -8px rgba(230,57,70,0.7); animation: pulse-call 1.8s infinite; font-weight:700; font-size:0.95rem; white-space:nowrap;
+  }
+  @keyframes pulse-call{
+    0%{ box-shadow: 0 0 0 0 rgba(230,57,70,0.55); }
+    70%{ box-shadow: 0 0 0 16px rgba(230,57,70,0); }
+    100%{ box-shadow: 0 0 0 0 rgba(230,57,70,0); }
+  }
+
+  @media (max-width: 900px){
+    .article-grid{ grid-template-columns: 1fr; }
+    .footer-grid{ grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px){
+    .top-bar .right-links{ display:none; }
+    .article-body{ padding: 18px; }
+  }
+</style>
+<script src="/js/safe.js"></script>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="wrap">
+    <a href="tel:0902312009" class="hotline">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      Hotline: 090 231 2009
+    </a>
+    <div class="right-links">
+      <a href="index.html#lien-he">Liên hệ tư vấn</a>
+      <a href="gioi-thieu.html">Giới thiệu</a>
+    </div>
+  </div>
+</div>
+
+<header class="main-header">
+  <div class="header-row">
+    <a href="index.html" class="logo">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 11L12 3l9 8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h5v-6h4v6h5V10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="text">
+        <div class="l1">TỔ ẤM</div>
+        <div class="l2">Mua bán &amp; cho thuê nhà đất</div>
+      </div>
+    </a>
+    <div class="promo-banner">
+      <span class="tag">HƠN</span> <span class="big" id="totalListingsCount">…</span> <span class="tag">TIN ĐĂNG ĐÃ XÁC THỰC</span>
+    </div>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <div class="wrap">
+    <ul>
+      <li><a href="index.html">🏠 Trang chủ</a></li>
+      <li>
+        <a href="danh-sach-ban.html">Nhà đất cần bán</a>
+        <div class="nav-dropdown">
+          <a href="danh-sach-ban.html?category=Bi%E1%BB%87t%20th%E1%BB%B1">Bán biệt thự</a>
+          <a href="danh-sach-ban.html?category=C%C4%83n%20h%E1%BB%99">Bán chung cư</a>
+          <a href="danh-sach-ban.html?category=%C4%90%E1%BA%A5t%20n%E1%BB%81n">Bán đất nền</a>
+          <a href="danh-sach-ban.html?category=Nh%C3%A0%20ph%E1%BB%91">Bán nhà mặt phố</a>
+        </div>
+      </li>
+      <li>
+        <a href="danh-sach-thue.html">Nhà đất cho thuê</a>
+        <div class="nav-dropdown">
+          <a href="danh-sach-thue.html?category=Bi%E1%BB%87t%20th%E1%BB%B1">Cho thuê biệt thự</a>
+          <a href="danh-sach-thue.html?category=C%C4%83n%20h%E1%BB%99">Cho thuê chung cư</a>
+          <a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">Cho thuê cửa hàng</a>
+          <a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">Cho thuê mặt bằng</a>
+          <a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">Cho thuê văn phòng</a>
+        </div>
+      </li>
+      <li>
+        <a href="danh-sach-sang-nhuong.html">Sang nhượng</a>
+        <div class="nav-dropdown">
+          <a href="danh-sach-sang-nhuong.html?category=C%E1%BB%ADa%20h%C3%A0ng">Sang nhượng cửa hàng</a>
+          <a href="danh-sach-sang-nhuong.html?category=Kh%C3%A1ch%20s%E1%BA%A1n">Sang nhượng khách sạn</a>
+          <a href="danh-sach-sang-nhuong.html?category=Qu%C3%A1n%20cafe">Sang nhượng quán cafe</a>
+          <a href="danh-sach-sang-nhuong.html?category=M%E1%BA%B7t%20b%E1%BA%B1ng">Sang nhượng mặt bằng</a>
+        </div>
+      </li>
+      <li><a href="index.html#du-an">Dự án</a></li>
+      <li><a href="index.html#cam-nang">Cẩm nang</a></li>
+      <li><a href="index.html#tin-tuc-block">Tin tức</a></li>
+      <li><a href="gioi-thieu.html">Giới thiệu</a></li>
+      <li><a href="index.html#lien-he">Liên hệ</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="breadcrumb">
+    <a href="index.html">Trang chủ</a><span>›</span>
+    <span id="breadcrumbCategory"></span><span>›</span>
+    <span id="breadcrumbTitle"></span>
+  </div>
+
+  <div id="articleContainer">
+    <div class="grid-status">Đang tải bài viết...</div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h4>Nhà đất cần bán</h4>
+        <ul>
+          <li><a href="danh-sach-ban.html?category=Bi%E1%BB%87t%20th%E1%BB%B1">› Bán biệt thự</a></li>
+          <li><a href="danh-sach-ban.html?category=C%C4%83n%20h%E1%BB%99">› Bán chung cư</a></li>
+          <li><a href="danh-sach-ban.html?category=%C4%90%E1%BA%A5t%20n%E1%BB%81n">› Bán đất</a></li>
+          <li><a href="danh-sach-ban.html?category=%C4%90%E1%BA%A5t%20n%E1%BB%81n">› Bán đất nền dự án</a></li>
+          <li><a href="danh-sach-ban.html?category=Nh%C3%A0%20ph%E1%BB%91">› Bán nhà mặt phố</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Nhà đất cho thuê</h4>
+        <ul>
+          <li><a href="danh-sach-thue.html?category=Bi%E1%BB%87t%20th%E1%BB%B1">› Cho thuê biệt thự</a></li>
+          <li><a href="danh-sach-thue.html?category=C%C4%83n%20h%E1%BB%99">› Cho thuê chung cư</a></li>
+          <li><a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">› Cho thuê cửa hàng</a></li>
+          <li><a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">› Cho thuê mặt bằng</a></li>
+          <li><a href="danh-sach-thue.html?category=Nh%C3%A0%20ph%E1%BB%91">› Cho thuê văn phòng</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Sang nhượng</h4>
+        <ul>
+          <li><a href="danh-sach-sang-nhuong.html?category=C%E1%BB%ADa%20h%C3%A0ng">› Sang nhượng cửa hàng</a></li>
+          <li><a href="danh-sach-sang-nhuong.html?category=Kh%C3%A1ch%20s%E1%BA%A1n">› Sang nhượng khách sạn</a></li>
+          <li><a href="danh-sach-sang-nhuong.html?category=Qu%C3%A1n%20cafe">› Sang nhượng quán cafe</a></li>
+          <li><a href="danh-sach-sang-nhuong.html?category=M%E1%BA%B7t%20b%E1%BA%B1ng">› Sang nhượng mặt bằng</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Liên hệ</h4>
+        <ul>
+          <li>📞 090 231 2009</li>
+          <li>✉️ info@toam.vn</li>
+          <li>📍 Tầng 8, Tòa Sunrise, Quận 1, TP.HCM</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <b>© 2026 Tổ Ấm.</b> Bảo lưu mọi quyền. &nbsp;|&nbsp; Hotline: <b>090 231 2009</b> &nbsp;|&nbsp; Email: info@toam.vn
+    </div>
+  </div>
+</footer>
+
+<a href="tel:0902312009" class="float-call" aria-label="Gọi hotline"> <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg> 090 231 2009
+</a>
+
+<script>
+  const API = '/api';
+  const NEWS_FALLBACK_IMG = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&q=70';
+  const id = getDetailId();
+
+  function fmtDate(iso){
+    if (!iso) return '';
+    const d = new Date(iso.replace(' ', 'T') + 'Z');
+    return d.toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  const CATEGORY_LABELS = {
+    'tin-tuc': { name: 'Tin tức', anchor: 'index.html#tin-tuc-block' },
+    'tu-van-luat': { name: 'Tư vấn luật', anchor: 'index.html#cam-nang' },
+    'thiet-ke-kien-truc': { name: 'Thiết kế kiến trúc', anchor: 'index.html#cam-nang' }
+  };
+
+  function renderNotFound(){
+    document.getElementById('articleContainer').innerHTML = `
+      <div class="grid-status">
+        Không tìm thấy bài viết này. Có thể bài viết đã bị gỡ hoặc đường dẫn không đúng.
+        <br><br><a href="index.html" style="color:var(--red); font-weight:700;">« Quay lại trang chủ</a>
+      </div>`;
+  }
+
+  async function loadArticle(){
+    if (!id){ renderNotFound(); return; }
+    try{
+      const res = await fetch(`${API}/news/${id}`);
+      if (!res.ok){ renderNotFound(); return; }
+      const data = await res.json();
+      const n = data.news;
+      document.title = `${esc(n.title)} — Tổ Ấm`;
+
+      const catInfo = CATEGORY_LABELS[n.category] || CATEGORY_LABELS['tin-tuc'];
+      document.getElementById('breadcrumbCategory').innerHTML = `<a href="${catInfo.anchor}">${catInfo.name}</a>`;
+      document.getElementById('breadcrumbTitle').textContent = n.title;
+
+      document.getElementById('articleContainer').innerHTML = `
+        <div class="article-grid">
+          <div class="article-main">
+            ${n.imagePath ? `<div class="article-cover"><img src="${esc(n.imagePath)}" alt="${esc(n.title)}"></div>` : ''}
+            <div class="article-body">
+              <h1>${esc(n.title)}</h1>
+              <div class="article-meta">
+                <span>📅 ${fmtDate(n.createdAt)}</span>
+                <span>✍️ ${esc(n.authorName || 'Tổ Ấm')}</span>
+              </div>
+              <div class="article-content">${esc(n.content)}</div>
+            </div>
+          </div>
+          <aside>
+            <div class="contact-box" style="margin-bottom:22px;">
+              <h3>Cần tư vấn thêm?</h3>
+              <a href="tel:0902312009" class="btn-call">📞 Gọi hotline: 090 231 2009</a>
+            </div>
+            <div class="side-box">
+              <div class="side-box-head"><span class="dot"></span><h3>${catInfo.name} khác</h3></div>
+              <div id="otherNews"></div>
+            </div>
+          </aside>
+        </div>
+      `;
+
+      loadOtherNews(n.id, n.category);
+    } catch(e){
+      renderNotFound();
+    }
+  }
+
+  async function loadOtherNews(currentId, category){
+    try{
+      const res = await fetch(`${API}/news?category=${category}&limit=6`);
+      const data = await res.json();
+      const items = data.news.filter(x => x.id !== Number(currentId)).slice(0, 5);
+      const el = document.getElementById('otherNews');
+      if (!items.length){ el.innerHTML = '<div class="grid-status">Chưa có bài viết khác.</div>'; return; }
+      el.innerHTML = items.map(n => `
+        <a class="side-news-item" href="${detailUrl('news', n)}">
+          <div class="thumb"><img src="${esc(n.imagePath || NEWS_FALLBACK_IMG)}" alt=""></div>
+          <div class="title">${esc(n.title)}</div>
+        </a>
+      `).join('');
+    } catch(e){ /* im lặng bỏ qua */ }
+  }
+
+  loadArticle();
+
+  /* ===== Tự động cập nhật tổng số tin đăng thật từ database ===== */
+  (async function updateTotalListingsCount(){
+    try{
+      const res = await fetch('/api/listings?limit=1');
+      const data = await res.json();
+      const el = document.getElementById('totalListingsCount');
+      if (el) el.textContent = (data.total || 0).toLocaleString('vi-VN') + '+';
+    } catch(e){
+      const el = document.getElementById('totalListingsCount');
+      if (el) el.textContent = '';
+    }
+  })();
+</script>
+
+</body>
+</html>
