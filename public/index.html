@@ -353,7 +353,8 @@
     animation: ticker-scroll 26s linear infinite;
     padding: 12px 0;
   }
-  .ticker .track span{ color:#ddd; font-size:0.84rem; }
+  .ticker .track span, .ticker .track a{ color:#ddd; font-size:0.84rem; text-decoration:none; }
+  .ticker .track a:hover{ color:#fff; text-decoration:underline; }
   .ticker .track b{ color:#fff; }
   @keyframes ticker-scroll{
     from{ transform: translateX(0); }
@@ -719,7 +720,7 @@
 </div>
 
 <!-- NEWS TICKER -->
-<div class="ticker">
+<div class="ticker" id="newsTicker">
   <div class="label">📰 BÁO CHÍ</div>
   <div class="track-wrap">
     <div class="track" id="tickerTrack"></div>
@@ -1227,15 +1228,21 @@
     }
   }
 
-  /* ===== Ticker tin tức (tĩnh) ===== */
-  const NEWS = [
-    'Nhịp sống thị trường mua bán và cho thuê nhà mặt phố tăng nhiệt cuối năm.',
-    'Giá thuê mặt bằng trung tâm TP.HCM đang phục hồi sau giai đoạn trầm lắng.',
-    'Xu hướng đầu tư đất nền vùng ven tiếp tục được nhà đầu tư quan tâm.',
-    'Chính sách tín dụng mới hỗ trợ người mua nhà lần đầu.',
-  ];
-  const tickerHTML = NEWS.map(n => `<span><b>Tổ Ấm:</b> ${n}</span>`).join('');
-  document.getElementById('tickerTrack').innerHTML = tickerHTML + tickerHTML;
+  /* ===== Ticker tin tức (lấy tin thật đã đăng ở trang quản trị — bấm vào mở đúng bài viết đó) ===== */
+  async function loadTicker(){
+    const wrap = document.getElementById('newsTicker');
+    try{
+      const res = await fetch(`${API}/news?limit=10`);
+      const data = await res.json();
+      if (!data.news || !data.news.length){ wrap.style.display = 'none'; return; } // chưa có tin nào -> ẩn cả thanh chạy chữ
+      const items = data.news.map(n => `<a href="${detailUrl('news', n)}"><b>Tổ Ấm:</b> ${esc(n.title)}</a>`).join('');
+      // Lặp lại danh sách 2 lần để hiệu ứng cuộn (translateX -50%) không bị hụt giữa chừng
+      document.getElementById('tickerTrack').innerHTML = items + items;
+    } catch(e){
+      wrap.style.display = 'none';
+    }
+  }
+  loadTicker();
 
   /* ===== Khối Tin tức bất động sản (dữ liệu thật từ admin) ===== */
   const NEWS_FALLBACK_IMG = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=70';
