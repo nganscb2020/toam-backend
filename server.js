@@ -16,6 +16,7 @@ const newsRoutes = require('./routes/news');
 const projectRoutes = require('./routes/projects');
 const transferRoutes = require('./routes/transfers');
 const contactRoutes = require('./routes/contact');
+const mediaRoutes = require('./routes/media');
 const { normalizeQuery } = require('./lib/validate');
 const { csrfGuard } = require('./middleware/csrf');
 const { slugPath } = require('./lib/slug');
@@ -242,6 +243,7 @@ app.use('/api/news', newsRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/contact', contactLimiter, contactRoutes);
+app.use('/api/media', mediaRoutes);
 
 // API không tồn tại → 404 dạng JSON (không rơi xuống trang chủ)
 app.use('/api', (req, res) => res.status(404).json({ error: 'Không tìm thấy.' }));

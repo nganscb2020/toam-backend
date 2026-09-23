@@ -77,6 +77,7 @@
   .article-body h1{ font-size:1.5rem; font-weight:800; line-height:1.4; margin-bottom:12px; }
   .article-meta{ font-size:0.82rem; color: var(--ink-soft); margin-bottom:20px; display:flex; gap:16px; flex-wrap:wrap; }
   .article-content{ font-size:0.98rem; color:#333; white-space: pre-line; line-height:1.75; }
+  .article-content img{ max-width:100%; border-radius:10px; display:block; margin:18px 0; }
 
   /* ---------- Sidebar bài viết khác ---------- */
   .side-box{ background: var(--surface); border:1px solid var(--line); border-radius:8px; overflow:hidden; margin-bottom:22px; }
@@ -315,7 +316,7 @@
                 <span>📅 ${fmtDate(n.createdAt)}</span>
                 <span>✍️ ${esc(n.authorName || 'Tổ Ấm')}</span>
               </div>
-              <div class="article-content">${esc(n.content)}</div>
+              <div class="article-content">${renderArticleContent(n.content)}</div>
             </div>
           </div>
           <aside>

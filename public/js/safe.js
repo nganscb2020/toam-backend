@@ -37,18 +37,15 @@ window.getDetailId = function () {
   return new URLSearchParams(window.location.search).get('id');
 };
 
-// ---- Định dạng đơn giản trong nội dung bài viết: ảnh, đậm, nghiêng, gạch dưới ----
-// Phải khớp với hàm cùng tên trong lib/ssr.js (phía máy chủ) — sửa 1 bên nhớ sửa bên kia.
+// ---- Chèn ảnh vào giữa nội dung bài viết bằng cú pháp "![mô tả](/uploads/xxx.jpg)" ----
+// Phải khớp với hàm cùng tên trong lib/ssr.js (phía máy chủ).
 window.renderArticleContent = function (raw) {
   const text = String(raw || '');
-  const re = /!\[([^\]\n]{0,200})\]\((\/uploads\/[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|webp))\)|\*\*([^\n]+?)\*\*|\+\+([^\n]+?)\+\+|\*([^\n*]+?)\*/g;
+  const re = /!\[([^\]\n]{0,200})\]\((\/uploads\/[a-zA-Z0-9_.-]+\.(?:jpg|jpeg|png|webp))\)/g;
   let out = '', last = 0, m;
   while ((m = re.exec(text))) {
     out += window.esc(text.slice(last, m.index));
-    if (m[1] !== undefined) out += `<img src="${window.esc(m[2])}" alt="${window.esc(m[1])}" loading="lazy">`;
-    else if (m[3] !== undefined) out += `<strong>${window.esc(m[3])}</strong>`;
-    else if (m[4] !== undefined) out += `<u>${window.esc(m[4])}</u>`;
-    else if (m[5] !== undefined) out += `<em>${window.esc(m[5])}</em>`;
+    out += `<img src="${window.esc(m[2])}" alt="${window.esc(m[1])}" loading="lazy">`;
     last = re.lastIndex;
   }
   out += window.esc(text.slice(last));
