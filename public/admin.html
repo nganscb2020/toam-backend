@@ -355,7 +355,16 @@
       </div>
       <div class="field">
         <label for="newsContent">Nội dung đầy đủ</label>
-        <textarea id="newsContent" style="min-height:180px;" placeholder="Nội dung chi tiết của bài viết..." required></textarea>
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
+          <button type="button" class="btn" data-wrap="**" title="In đậm" style="font-weight:800; padding:6px 14px;">B</button>
+          <button type="button" class="btn" data-wrap="*" title="In nghiêng" style="font-style:italic; padding:6px 14px;">I</button>
+          <button type="button" class="btn" data-wrap="++" title="Gạch dưới" style="text-decoration:underline; padding:6px 14px;">U</button>
+          <span style="width:1px; align-self:stretch; background:var(--line); margin:0 2px;"></span>
+          <button type="button" class="btn" id="newsInsertImageBtn" style="font-size:0.82rem; padding:6px 12px;">🖼️ Chèn ảnh vào nội dung</button>
+          <span id="newsInsertImageStatus" style="font-size:0.8rem; color:var(--ink-soft);"></span>
+        </div>
+        <input type="file" id="newsInlineImageFile" accept="image/png, image/jpeg, image/webp" style="display:none;">
+        <textarea id="newsContent" style="min-height:180px;" placeholder="Nội dung chi tiết của bài viết... Bấm 'Chèn ảnh vào nội dung' ở trên để thêm ảnh ngay tại vị trí con trỏ." required></textarea>
       </div>
       <div class="field">
         <label for="newsImage">Ảnh minh hoạ (JPG/PNG/WEBP, tối đa 5MB)</label>
@@ -949,6 +958,57 @@
   }
 
   document.getElementById('newNewsBtn').addEventListener('click', () => openNewsModal());
+
+  // Bọc đoạn chữ đang bôi đen trong ô nội dung bằng ký hiệu định dạng (đậm/nghiêng/gạch dưới).
+  // Chưa bôi đen gì thì chèn cặp ký hiệu và đặt con trỏ vào giữa để gõ tiếp luôn.
+  function wrapSelection(textarea, mark) {
+    const start = textarea.selectionStart, end = textarea.selectionEnd;
+    const val = textarea.value;
+    const selected = val.slice(start, end);
+    textarea.value = val.slice(0, start) + mark + selected + mark + val.slice(end);
+    textarea.focus();
+    if (selected) textarea.setSelectionRange(start + mark.length, start + mark.length + selected.length);
+    else textarea.setSelectionRange(start + mark.length, start + mark.length);
+  }
+  document.querySelectorAll('#newsForm [data-wrap]').forEach(btn => {
+    btn.addEventListener('click', () => wrapSelection(document.getElementById('newsContent'), btn.dataset.wrap));
+  });
+
+  // "Chèn ảnh vào nội dung": tải ảnh lên máy chủ, rồi chèn "![tên ảnh](đường dẫn)" vào đúng
+  // vị trí con trỏ đang đứng trong ô nội dung — khi hiển thị, đoạn này sẽ tự động biến thành ảnh thật.
+  document.getElementById('newsInsertImageBtn').addEventListener('click', () => {
+    document.getElementById('newsInlineImageFile').click();
+  });
+  document.getElementById('newsInlineImageFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById('newsInsertImageStatus');
+    const textarea = document.getElementById('newsContent');
+    const btn = document.getElementById('newsInsertImageBtn');
+    statusEl.textContent = 'Đang tải ảnh lên...';
+    btn.disabled = true;
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch(`${API}/media/upload`, { method: 'POST', headers: authHeaders(), body: fd });
+      const data = await res.json();
+      if (!res.ok) { statusEl.textContent = data.error || 'Tải ảnh thất bại.'; return; }
+
+      const marker = `\n![${file.name.replace(/[\[\]]/g, '')}](${data.path})\n`;
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      textarea.value = textarea.value.slice(0, start) + marker + textarea.value.slice(end);
+      const newPos = start + marker.length;
+      textarea.focus();
+      textarea.setSelectionRange(newPos, newPos);
+      statusEl.textContent = 'Đã chèn ảnh vào nội dung.';
+    } catch (err) {
+      statusEl.textContent = 'Không kết nối được máy chủ.';
+    } finally {
+      btn.disabled = false;
+      e.target.value = ''; // cho phép chọn lại cùng 1 file lần sau nếu cần
+    }
+  });
 
   document.getElementById('newsForm').addEventListener('submit', async (e) => {
     e.preventDefault();
