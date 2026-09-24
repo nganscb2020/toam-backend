@@ -355,7 +355,11 @@
       </div>
       <div class="field">
         <label for="newsContent">Nội dung đầy đủ</label>
-        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+        <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap:wrap;">
+          <button type="button" class="btn" data-wrap="**" title="In đậm" style="font-weight:800; padding:6px 14px;">B</button>
+          <button type="button" class="btn" data-wrap="*" title="In nghiêng" style="font-style:italic; padding:6px 14px;">I</button>
+          <button type="button" class="btn" data-wrap="++" title="Gạch dưới" style="text-decoration:underline; padding:6px 14px;">U</button>
+          <span style="width:1px; align-self:stretch; background:var(--line); margin:0 2px;"></span>
           <button type="button" class="btn" id="newsInsertImageBtn" style="font-size:0.82rem; padding:6px 12px;">🖼️ Chèn ảnh vào nội dung</button>
           <span id="newsInsertImageStatus" style="font-size:0.8rem; color:var(--ink-soft);"></span>
         </div>
@@ -954,6 +958,21 @@
   }
 
   document.getElementById('newNewsBtn').addEventListener('click', () => openNewsModal());
+
+  // Bọc đoạn chữ đang bôi đen trong ô nội dung bằng ký hiệu định dạng (đậm/nghiêng/gạch dưới).
+  // Chưa bôi đen gì thì chèn cặp ký hiệu và đặt con trỏ vào giữa để gõ tiếp luôn.
+  function wrapSelection(textarea, mark) {
+    const start = textarea.selectionStart, end = textarea.selectionEnd;
+    const val = textarea.value;
+    const selected = val.slice(start, end);
+    textarea.value = val.slice(0, start) + mark + selected + mark + val.slice(end);
+    textarea.focus();
+    if (selected) textarea.setSelectionRange(start + mark.length, start + mark.length + selected.length);
+    else textarea.setSelectionRange(start + mark.length, start + mark.length);
+  }
+  document.querySelectorAll('#newsForm [data-wrap]').forEach(btn => {
+    btn.addEventListener('click', () => wrapSelection(document.getElementById('newsContent'), btn.dataset.wrap));
+  });
 
   // "Chèn ảnh vào nội dung": tải ảnh lên máy chủ, rồi chèn "![tên ảnh](đường dẫn)" vào đúng
   // vị trí con trỏ đang đứng trong ô nội dung — khi hiển thị, đoạn này sẽ tự động biến thành ảnh thật.
