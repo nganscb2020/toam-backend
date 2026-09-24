@@ -25,37 +25,37 @@ function toPublicProject(row) {
 }
 
 // ---- Danh sách dự án (phân trang) ----
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { limit, offset } = req.query;
   const lim = Math.min(Number(limit) || 10, 50);
   const off = Number(offset) || 0;
 
-  const rows = db.prepare(`
+  const rows = await db.all(`
     SELECT projects.*, users.name AS owner_name FROM projects
     JOIN users ON users.id = projects.user_id
     ORDER BY projects.created_at DESC
     LIMIT ? OFFSET ?
-  `).all(lim, off);
+  `, [lim, off]);
 
-  const total = db.prepare('SELECT COUNT(*) AS total FROM projects').get().total;
+  const total = (await db.get('SELECT COUNT(*) AS total FROM projects')).total;
 
   res.json({ projects: rows.map(toPublicProject), total, limit: lim, offset: off });
 });
 
 // ---- Chi tiết 1 dự án ----
-router.get('/:id', (req, res) => {
-  const row = db.prepare(`
+router.get('/:id', async (req, res) => {
+  const row = await db.get(`
     SELECT projects.*, users.name AS owner_name FROM projects
     JOIN users ON users.id = projects.user_id
     WHERE projects.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!row) return res.status(404).json({ error: 'Không tìm thấy dự án.' });
   res.json({ project: toPublicProject(row) });
 });
 
 // ---- Đăng dự án mới ----
-router.post('/', requireAdmin, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), async (req, res) => {
   const { name, location, description } = req.body;
   const bad = checkFields(req.body, { name: [200, 'Tên dự án'], location: [300, 'Vị trí'], description: [20000, 'Mô tả'] });
   if (bad) return res.status(400).json({ error: bad });
@@ -65,22 +65,22 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
 
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO projects (user_id, name, location, description, image_path)
     VALUES (?, ?, ?, ?, ?)
-  `).run(req.user.id, name.trim(), location ? location.trim() : null, description ? description.trim() : null, imagePath);
+  `, [req.user.id, name.trim(), location ? location.trim() : null, description ? description.trim() : null, imagePath]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT projects.*, users.name AS owner_name FROM projects
     JOIN users ON users.id = projects.user_id WHERE projects.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
 
   res.status(201).json({ project: toPublicProject(row) });
 });
 
 // ---- Sửa dự án ----
-router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
-  const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+router.put('/:id', requireAdmin, upload.single('image'), async (req, res) => {
+  const existing = await db.get('SELECT * FROM projects WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy dự án.' });
 
   const { name, location, description } = req.body;
@@ -96,30 +96,30 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
     }
   }
 
-  db.prepare(`
+  await db.run(`
     UPDATE projects SET name = ?, location = ?, description = ?, image_path = ? WHERE id = ?
-  `).run(
+  `, [
     name ? name.trim() : existing.name,
     location !== undefined ? location.trim() : existing.location,
     description !== undefined ? description.trim() : existing.description,
     imagePath,
     req.params.id
-  );
+  ]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT projects.*, users.name AS owner_name FROM projects
     JOIN users ON users.id = projects.user_id WHERE projects.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   res.json({ project: toPublicProject(row) });
 });
 
 // ---- Xoá dự án ----
-router.delete('/:id', requireAdmin, (req, res) => {
-  const existing = db.prepare('SELECT * FROM projects WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAdmin, async (req, res) => {
+  const existing = await db.get('SELECT * FROM projects WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy dự án.' });
 
-  db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM projects WHERE id = ?', [req.params.id]);
 
   if (existing.image_path) {
     const filePath = path.join(__dirname, '..', 'public', existing.image_path);

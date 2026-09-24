@@ -79,7 +79,7 @@ router.post('/register', async (req, res) => {
       return res.status(403).json({ error: 'Mã thiết lập không đúng. Chỉ quản trị viên mới được tạo tài khoản.' });
     }
 
-    const existingCount = db.prepare('SELECT COUNT(*) AS c FROM users').get().c;
+    const existingCount = (await db.get('SELECT COUNT(*) AS c FROM users')).c;
     if (existingCount > 0 && process.env.ALLOW_MORE_ADMINS !== 'true') {
       return res.status(403).json({ error: 'Tài khoản quản trị đã được tạo. Vui lòng đăng nhập.' });
     }
@@ -98,17 +98,18 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Mật khẩu cần từ 10 đến 128 ký tự.' });
     }
 
-    const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+    const existing = await db.get('SELECT id FROM users WHERE email = ?', [cleanEmail]);
     if (existing) {
       return res.status(409).json({ error: 'Email này đã được đăng ký.' });
     }
 
     const password_hash = await bcrypt.hash(password, BCRYPT_COST);
-    const info = db.prepare(
-      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'admin')"
-    ).run(name.trim(), cleanEmail, phone ? String(phone).trim() : null, password_hash);
+    const info = await db.run(
+      "INSERT INTO users (name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'admin')",
+      [name.trim(), cleanEmail, phone ? String(phone).trim() : null, password_hash]
+    );
 
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [info.lastInsertRowid]);
     startSession(res, user);
     res.status(201).json({ user: publicUser(user) });
   } catch (err) {
@@ -133,7 +134,7 @@ router.post('/login', async (req, res) => {
       return res.status(429).json({ error: 'Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.' });
     }
 
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
+    const user = await db.get('SELECT * FROM users WHERE email = ?', [cleanEmail]);
     const ok = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
     if (!user || !ok) {
       recordFail(cleanEmail);
@@ -151,13 +152,13 @@ router.post('/login', async (req, res) => {
 
 // Đăng xuất: xoá cookie VÀ thu hồi phía server (tăng token_version) → token cũ dù bị sao chép cũng vô dụng.
 // Lưu ý: thu hồi này áp dụng cho mọi thiết bị đang đăng nhập bằng tài khoản đó.
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
   try {
     const token = extractToken(req);
     if (token) {
       try {
-        const user = loadUser(token);
-        db.prepare('UPDATE users SET token_version = token_version + 1 WHERE id = ?').run(user.id);
+        const user = await loadUser(token);
+        await db.run('UPDATE users SET token_version = token_version + 1 WHERE id = ?', [user.id]);
       } catch (e) { /* token đã hết hạn/không hợp lệ: chỉ cần xoá cookie */ }
     }
   } catch (err) {
@@ -168,8 +169,8 @@ router.post('/logout', (req, res) => {
 });
 
 // Lấy thông tin tài khoản đang đăng nhập
-router.get('/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+router.get('/me', requireAuth, async (req, res) => {
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [req.user.id]);
   if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản.' });
   res.json({ user: publicUser(user) });
 });

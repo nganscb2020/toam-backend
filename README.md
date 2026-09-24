@@ -1,4 +1,4 @@
-# Tổ Ấm — Backend bất động sản (mô hình môi giới)
+# BDSCHÍNHCHỦHCM — Backend bất động sản (mô hình môi giới)
 
 Đây là mô hình **website môi giới**: khách truy cập chỉ xem tin, không tự đăng
 được. Toàn bộ việc đăng/sửa/xoá tin do **admin** (bạn) thực hiện qua một trang

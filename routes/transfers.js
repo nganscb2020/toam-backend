@@ -29,7 +29,7 @@ function toPublicTransfer(row) {
 }
 
 // ---- Danh sách (lọc theo category + phân trang) ----
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { category, limit, offset } = req.query;
   const lim = Math.min(Number(limit) || 10, 50);
   const off = Number(offset) || 0;
@@ -52,26 +52,26 @@ router.get('/', (req, res) => {
   sql += ' ORDER BY transfers.created_at DESC LIMIT ? OFFSET ?';
   params.push(lim, off);
 
-  const rows = db.prepare(sql).all(...params);
-  const total = db.prepare(countSql).get(...countParams).total;
+  const rows = await db.all(sql, params);
+  const total = (await db.get(countSql, countParams)).total;
 
   res.json({ transfers: rows.map(toPublicTransfer), total, limit: lim, offset: off });
 });
 
 // ---- Chi tiết 1 tin ----
-router.get('/:id', (req, res) => {
-  const row = db.prepare(`
+router.get('/:id', async (req, res) => {
+  const row = await db.get(`
     SELECT transfers.*, users.name AS owner_name FROM transfers
     JOIN users ON users.id = transfers.user_id
     WHERE transfers.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!row) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   res.json({ transfer: toPublicTransfer(row) });
 });
 
 // ---- Đăng tin mới ----
-router.post('/', requireAdmin, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), async (req, res) => {
   const { category, title, description, price, priceUnit, address, area } = req.body;
   const bad = checkFields(req.body, { category: [100, 'Loại hình'], title: [200, 'Tiêu đề'], description: [20000, 'Mô tả'], priceUnit: [10, 'Đơn vị giá'], address: [300, 'Địa chỉ'] })
     || checkNumbers(req.body, { price: [0, 1e12, 'Giá'], area: [0, 1e7, 'Diện tích'] });
@@ -83,26 +83,26 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
 
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO transfers (user_id, category, title, description, price, price_unit, address, area, image_path)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `, [
     req.user.id, category.trim(), title.trim(), description ? description.trim() : null,
     price ? Number(price) : null, priceUnit || 'trieu', address.trim(),
     area ? Number(area) : null, imagePath
-  );
+  ]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT transfers.*, users.name AS owner_name FROM transfers
     JOIN users ON users.id = transfers.user_id WHERE transfers.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
 
   res.status(201).json({ transfer: toPublicTransfer(row) });
 });
 
 // ---- Sửa tin ----
-router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
-  const existing = db.prepare('SELECT * FROM transfers WHERE id = ?').get(req.params.id);
+router.put('/:id', requireAdmin, upload.single('image'), async (req, res) => {
+  const existing = await db.get('SELECT * FROM transfers WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
 
   const { category, title, description, price, priceUnit, address, area } = req.body;
@@ -120,10 +120,10 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
     }
   }
 
-  db.prepare(`
+  await db.run(`
     UPDATE transfers SET category = ?, title = ?, description = ?, price = ?, price_unit = ?, address = ?, area = ?, image_path = ?
     WHERE id = ?
-  `).run(
+  `, [
     category ? category.trim() : existing.category,
     title ? title.trim() : existing.title,
     description !== undefined ? description.trim() : existing.description,
@@ -133,22 +133,22 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
     area ? Number(area) : existing.area,
     imagePath,
     req.params.id
-  );
+  ]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT transfers.*, users.name AS owner_name FROM transfers
     JOIN users ON users.id = transfers.user_id WHERE transfers.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   res.json({ transfer: toPublicTransfer(row) });
 });
 
 // ---- Xoá tin ----
-router.delete('/:id', requireAdmin, (req, res) => {
-  const existing = db.prepare('SELECT * FROM transfers WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAdmin, async (req, res) => {
+  const existing = await db.get('SELECT * FROM transfers WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
 
-  db.prepare('DELETE FROM transfers WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM transfers WHERE id = ?', [req.params.id]);
 
   if (existing.image_path) {
     const filePath = path.join(__dirname, '..', 'public', existing.image_path);

@@ -46,11 +46,12 @@ function toPublicListing(row) {
   };
 }
 
-function getMediaFor(listingId) {
-  return db.prepare(`
+async function getMediaFor(listingId) {
+  const rows = await db.all(`
     SELECT id, media_type, file_path, sort_order FROM listing_media
     WHERE listing_id = ? ORDER BY sort_order ASC, id ASC
-  `).all(listingId).map(m => ({ id: m.id, type: m.media_type, path: m.file_path }));
+  `, [listingId]);
+  return rows.map(m => ({ id: m.id, type: m.media_type, path: m.file_path }));
 }
 
 function deleteMediaFile(filePath) {
@@ -59,11 +60,24 @@ function deleteMediaFile(filePath) {
   fs.unlink(full, () => {});
 }
 
+// Thêm nhiều ảnh/video liên tiếp — dùng vòng lặp tuần tự (không phải Promise.all song song),
+// để sort_order được gán đúng thứ tự người dùng đã chọn file.
+async function insertMediaFiles(listingId, files, startOrder = 0) {
+  let order = startOrder;
+  for (const f of files) {
+    const mediaType = f.mimetype.startsWith('video/') ? 'video' : 'image';
+    await db.run(
+      'INSERT INTO listing_media (listing_id, media_type, file_path, sort_order) VALUES (?, ?, ?, ?)',
+      [listingId, mediaType, `/uploads/${f.filename}`, order++]
+    );
+  }
+}
+
 // ---- Danh sách tin (có lọc + phân trang) ----
 // GET /api/listings?type=&category=&minPrice=&maxPrice=&q=&location=&ward=&street=
 //                    &minArea=&maxArea=&minWidth=&minLength=
 //                    &hasIncome=1&hasFurniture=1&hasElevator=1&carAlley=1&mine=1&limit=&offset=
-router.get('/', optionalAuth, (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   const {
     type, category, minPrice, maxPrice, q, location, ward, street,
     minArea, maxArea, minWidth, minLength,
@@ -146,32 +160,32 @@ router.get('/', optionalAuth, (req, res) => {
   sql += ' LIMIT ? OFFSET ?';
   params.push(lim, off);
 
-  const rows = db.prepare(sql).all(...params);
-  const total = db.prepare(countSql).get(...countParams).total;
+  const rows = await db.all(sql, params);
+  const total = (await db.get(countSql, countParams)).total;
 
   res.json({ listings: rows.map(toPublicListing), total, limit: lim, offset: off });
 });
 
 // ---- Chi tiết 1 tin (kèm toàn bộ ảnh/video) ----
-router.get('/:id', optionalAuth, (req, res) => {
-  const row = db.prepare(`
+router.get('/:id', optionalAuth, async (req, res) => {
+  const row = await db.get(`
     SELECT listings.*, users.name AS owner_name, users.phone AS owner_phone
     FROM listings JOIN users ON users.id = listings.user_id
     WHERE listings.id = ? AND (listings.status = 'active' OR listings.user_id = ?)
-  `).get(req.params.id, req.user ? req.user.id : -1);
+  `, [req.params.id, req.user ? req.user.id : -1]);
 
   if (!row) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   res.json({
     listing: {
       ...toPublicListing(row),
       ownerPhone: row.owner_phone,
-      media: getMediaFor(row.id)
+      media: await getMediaFor(row.id)
     }
   });
 });
 
 // ---- Đăng tin mới (cần đăng nhập, có thể kèm nhiều ảnh/video) ----
-router.post('/', requireAdmin, upload.array('media', 10), (req, res) => {
+router.post('/', requireAdmin, upload.array('media', 10), async (req, res) => {
   const {
     listingType, category, title, description,
     price, priceUnit, address, bedrooms, bathrooms, area,
@@ -200,13 +214,13 @@ router.post('/', requireAdmin, upload.array('media', 10), (req, res) => {
   const firstImage = files.find(f => f.mimetype.startsWith('image/'));
   const imagePath = firstImage ? `/uploads/${firstImage.filename}` : null;
 
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO listings
       (user_id, listing_type, category, title, description, price, price_unit, address,
        bedrooms, bathrooms, area, image_path,
        province, ward, street, width, length, has_income, has_furniture, has_elevator, car_alley, is_vip)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
+  `, [
     req.user.id, listingType, category, title.trim(), description || null,
     Number(price), priceUnit || 'ty', address.trim(),
     bedrooms ? Number(bedrooms) : null,
@@ -223,28 +237,22 @@ router.post('/', requireAdmin, upload.array('media', 10), (req, res) => {
     toBool(hasElevator === '1' || hasElevator === 'on' || hasElevator === true),
     toBool(carAlley === '1' || carAlley === 'on' || carAlley === true),
     toBool(isVip === '1' || isVip === 'on' || isVip === true)
-  );
+  ]);
 
   const listingId = info.lastInsertRowid;
-  const insertMedia = db.prepare(`
-    INSERT INTO listing_media (listing_id, media_type, file_path, sort_order) VALUES (?, ?, ?, ?)
-  `);
-  files.forEach((f, i) => {
-    const mediaType = f.mimetype.startsWith('video/') ? 'video' : 'image';
-    insertMedia.run(listingId, mediaType, `/uploads/${f.filename}`, i);
-  });
+  await insertMediaFiles(listingId, files, 0);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT listings.*, users.name AS owner_name FROM listings
     JOIN users ON users.id = listings.user_id WHERE listings.id = ?
-  `).get(listingId);
+  `, [listingId]);
 
-  res.status(201).json({ listing: { ...toPublicListing(row), media: getMediaFor(listingId) } });
+  res.status(201).json({ listing: { ...toPublicListing(row), media: await getMediaFor(listingId) } });
 });
 
 // ---- Sửa tin (chỉ chủ tin) — ảnh/video mới gửi lên sẽ được THÊM VÀO, không xoá cái cũ ----
-router.put('/:id', requireAdmin, upload.array('media', 10), (req, res) => {
-  const existing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+router.put('/:id', requireAdmin, upload.array('media', 10), async (req, res) => {
+  const existing = await db.get('SELECT * FROM listings WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (existing.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Bạn không có quyền sửa tin này.' });
@@ -272,16 +280,9 @@ router.put('/:id', requireAdmin, upload.array('media', 10), (req, res) => {
   // Thêm media mới vào bảng listing_media (nối tiếp sau media hiện có)
   let imagePath = existing.image_path;
   if (files.length) {
-    const maxOrderRow = db.prepare('SELECT MAX(sort_order) AS m FROM listing_media WHERE listing_id = ?').get(req.params.id);
-    let nextOrder = (maxOrderRow.m ?? -1) + 1;
-
-    const insertMedia = db.prepare(`
-      INSERT INTO listing_media (listing_id, media_type, file_path, sort_order) VALUES (?, ?, ?, ?)
-    `);
-    files.forEach((f) => {
-      const mediaType = f.mimetype.startsWith('video/') ? 'video' : 'image';
-      insertMedia.run(req.params.id, mediaType, `/uploads/${f.filename}`, nextOrder++);
-    });
+    const maxOrderRow = await db.get('SELECT MAX(sort_order) AS m FROM listing_media WHERE listing_id = ?', [req.params.id]);
+    const nextOrder = (maxOrderRow.m ?? -1) + 1;
+    await insertMediaFiles(req.params.id, files, nextOrder);
 
     // Nếu tin chưa có ảnh đại diện, lấy ảnh đầu tiên vừa thêm làm đại diện
     if (!imagePath) {
@@ -290,14 +291,14 @@ router.put('/:id', requireAdmin, upload.array('media', 10), (req, res) => {
     }
   }
 
-  db.prepare(`
+  await db.run(`
     UPDATE listings SET
       listing_type = ?, category = ?, title = ?, description = ?,
       price = ?, price_unit = ?, address = ?, bedrooms = ?, bathrooms = ?, area = ?, image_path = ?,
       province = ?, ward = ?, street = ?, width = ?, length = ?,
       has_income = ?, has_furniture = ?, has_elevator = ?, car_alley = ?, is_vip = ?
     WHERE id = ?
-  `).run(
+  `, [
     listingType || existing.listing_type,
     category || existing.category,
     title ? title.trim() : existing.title,
@@ -320,54 +321,54 @@ router.put('/:id', requireAdmin, upload.array('media', 10), (req, res) => {
     carAlley !== undefined ? toBool(carAlley === '1' || carAlley === 'on' || carAlley === true) : existing.car_alley,
     isVip !== undefined ? toBool(isVip === '1' || isVip === 'on' || isVip === true) : existing.is_vip,
     req.params.id
-  );
+  ]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT listings.*, users.name AS owner_name FROM listings
     JOIN users ON users.id = listings.user_id WHERE listings.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
-  res.json({ listing: { ...toPublicListing(row), media: getMediaFor(req.params.id) } });
+  res.json({ listing: { ...toPublicListing(row), media: await getMediaFor(req.params.id) } });
 });
 
 // ---- Xoá 1 ảnh/video cụ thể khỏi tin (chỉ chủ tin) ----
-router.delete('/:id/media/:mediaId', requireAdmin, (req, res) => {
-  const listing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+router.delete('/:id/media/:mediaId', requireAdmin, async (req, res) => {
+  const listing = await db.get('SELECT * FROM listings WHERE id = ?', [req.params.id]);
   if (!listing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (listing.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Bạn không có quyền sửa tin này.' });
   }
 
-  const media = db.prepare('SELECT * FROM listing_media WHERE id = ? AND listing_id = ?').get(req.params.mediaId, req.params.id);
+  const media = await db.get('SELECT * FROM listing_media WHERE id = ? AND listing_id = ?', [req.params.mediaId, req.params.id]);
   if (!media) return res.status(404).json({ error: 'Không tìm thấy ảnh/video này.' });
 
-  db.prepare('DELETE FROM listing_media WHERE id = ?').run(media.id);
+  await db.run('DELETE FROM listing_media WHERE id = ?', [media.id]);
   deleteMediaFile(media.file_path);
 
   // Nếu ảnh vừa xoá đang là ảnh đại diện, tự động chuyển sang ảnh còn lại kế tiếp (nếu có)
   if (listing.image_path === media.file_path) {
-    const nextImage = db.prepare(`
+    const nextImage = await db.get(`
       SELECT file_path FROM listing_media
       WHERE listing_id = ? AND media_type = 'image'
       ORDER BY sort_order ASC LIMIT 1
-    `).get(req.params.id);
-    db.prepare('UPDATE listings SET image_path = ? WHERE id = ?').run(nextImage ? nextImage.file_path : null, req.params.id);
+    `, [req.params.id]);
+    await db.run('UPDATE listings SET image_path = ? WHERE id = ?', [nextImage ? nextImage.file_path : null, req.params.id]);
   }
 
-  res.json({ ok: true, media: getMediaFor(req.params.id) });
+  res.json({ ok: true, media: await getMediaFor(req.params.id) });
 });
 
 // ---- Xoá tin (chỉ chủ tin) ----
-router.delete('/:id', requireAdmin, (req, res) => {
-  const existing = db.prepare('SELECT * FROM listings WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAdmin, async (req, res) => {
+  const existing = await db.get('SELECT * FROM listings WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy tin đăng.' });
   if (existing.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Bạn không có quyền xoá tin này.' });
   }
 
-  const mediaFiles = db.prepare('SELECT file_path FROM listing_media WHERE listing_id = ?').all(req.params.id);
+  const mediaFiles = await db.all('SELECT file_path FROM listing_media WHERE listing_id = ?', [req.params.id]);
 
-  db.prepare('DELETE FROM listings WHERE id = ?').run(req.params.id); // listing_media tự xoá theo (ON DELETE CASCADE)
+  await db.run('DELETE FROM listings WHERE id = ?', [req.params.id]); // listing_media tự xoá theo (ON DELETE CASCADE)
 
   mediaFiles.forEach(m => deleteMediaFile(m.file_path));
   if (existing.image_path) deleteMediaFile(existing.image_path);

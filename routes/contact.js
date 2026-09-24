@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
   const typeLabel = formType === 'ky-gui' ? 'Ký gửi' : 'Cần thuê/mua';
 
   const textBody = `
-Có một yêu cầu mới từ website Tổ Ấm (${typeLabel}):
+Có một yêu cầu mới từ website BDSCHÍNHCHỦHCM (${typeLabel}):
 
 Mục đích sử dụng: ${purpose}
 Tên phố quan tâm: ${street || '(không nhập)'}
@@ -78,10 +78,10 @@ Số điện thoại: ${phone}
 
   try {
     await transporter.sendMail({
-      from: `"Website Tổ Ấm" <${process.env.SMTP_USER}>`,
+      from: `"Website BDSCHÍNHCHỦHCM" <${process.env.SMTP_USER}>`,
       to: CONTACT_EMAIL,
       replyTo: undefined,
-      subject: `[Tổ Ấm] Yêu cầu mới — ${typeLabel} — ${name}`,
+      subject: `[BDSCHÍNHCHỦHCM] Yêu cầu mới — ${typeLabel} — ${name}`,
       text: textBody
     });
     res.json({ ok: true });

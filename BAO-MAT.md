@@ -1,4 +1,4 @@
-# Bảo mật website Tổ Ấm — những gì đã sửa và bạn cần làm
+# Bảo mật website BDSCHÍNHCHỦHCM — những gì đã sửa và bạn cần làm
 
 ## A. Việc BẮT BUỘC làm trước khi chạy bản này
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tổ Ấm — Mua bán & cho thuê nhà đất</title>
+<title>BDSCHÍNHCHỦHCM — Mua bán & cho thuê nhà đất</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -64,7 +64,7 @@
     display:flex; align-items:center; justify-content:center;
   }
   .logo .mark svg{ width:28px; height:28px; }
-  .logo .text .l1{ font-size:1.35rem; font-weight:800; color: var(--red); line-height:1; }
+  .logo .text .l1{ font-size:1.05rem; font-weight:800; color: var(--red); line-height:1.15; letter-spacing:-0.02em; }
   .logo .text .l2{ font-size:0.8rem; color: var(--ink-soft); }
 
   .promo-banner{
@@ -483,7 +483,7 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 11L12 3l9 8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h5v-6h4v6h5V10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="text">
-        <div class="l1">TỔ ẤM</div>
+        <div class="l1">BDSCHÍNHCHỦHCM</div>
         <div class="l2">Mua bán &amp; cho thuê nhà đất</div>
       </div>
     </div>
@@ -788,13 +788,13 @@
         <h4>Liên hệ</h4>
         <ul>
           <li>📞 090 231 2009</li>
-          <li>✉️ info@toam.vn</li>
+          <li>✉️ info@bdschinhchuhcm.vn</li>
           <li>📍 Tầng 8, Tòa Sunrise, Quận 1, TP.HCM</li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <b>© 2026 Tổ Ấm.</b> Bảo lưu mọi quyền. &nbsp;|&nbsp; Hotline: <b>090 231 2009</b> &nbsp;|&nbsp; Email: info@toam.vn
+      <b>© 2026 BDSCHÍNHCHỦHCM.</b> Bảo lưu mọi quyền. &nbsp;|&nbsp; Hotline: <b>090 231 2009</b> &nbsp;|&nbsp; Email: info@bdschinhchuhcm.vn
     </div>
   </div>
 </footer>
@@ -1235,7 +1235,7 @@
       const res = await fetch(`${API}/news?limit=10`);
       const data = await res.json();
       if (!data.news || !data.news.length){ wrap.style.display = 'none'; return; } // chưa có tin nào -> ẩn cả thanh chạy chữ
-      const items = data.news.map(n => `<a href="${detailUrl('news', n)}"><b>Tổ Ấm:</b> ${esc(n.title)}</a>`).join('');
+      const items = data.news.map(n => `<a href="${detailUrl('news', n)}"><b>BDSCHÍNHCHỦHCM:</b> ${esc(n.title)}</a>`).join('');
       // Lặp lại danh sách 2 lần để hiệu ứng cuộn (translateX -50%) không bị hụt giữa chừng
       document.getElementById('tickerTrack').innerHTML = items + items;
     } catch(e){

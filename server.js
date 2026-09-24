@@ -104,7 +104,7 @@ app.use((req, res, next) => {
 // ---- Đường dẫn đẹp cho trang chi tiết: /bat-dong-san/ban-can-ho-quan-4-2 (số cuối là mã tin) ----
 // Bảng/cột được cố định trong mã (không lấy từ người dùng) nên câu truy vấn an toàn.
 // fallbackImage: ảnh dùng khi tin không có ảnh riêng, để link chia sẻ vẫn có hình thay vì trống.
-const SITE_NAME = 'Tổ Ấm';
+const SITE_NAME = 'BDSCHÍNHCHỦHCM';
 const DETAIL = {
   'bat-dong-san': {
     file: 'listing.html', table: 'listings', titleCol: 'title', type: 'product',
@@ -312,6 +312,7 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
       imageType: row.image_path ? imageType(row.image_path) : 'image/jpeg', // ảnh mặc định (Unsplash) luôn là JPEG
       url,
       type: d.type,
+      siteName: SITE_NAME,
       jsonLd: [d.buildSchema(row, { url, image }), breadcrumb]
     });
 

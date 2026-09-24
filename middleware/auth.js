@@ -26,22 +26,23 @@ function extractToken(req) {
 }
 
 // Xác minh token VÀ kiểm tra tài khoản còn tồn tại, còn đúng phiên bản token (chưa bị thu hồi khi đăng xuất).
-function loadUser(token) {
+// (Giờ phải "await" vì việc đọc từ MySQL là bất đồng bộ — trước đây SQLite đọc ngay lập tức nên không cần.)
+async function loadUser(token) {
   const payload = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
-  const user = db.prepare('SELECT id, name, email, role, token_version FROM users WHERE id = ?').get(payload.id);
+  const user = await db.get('SELECT id, name, email, role, token_version FROM users WHERE id = ?', [payload.id]);
   if (!user) throw new Error('user not found');
   if ((payload.v || 0) !== user.token_version) throw new Error('token revoked');
   return user;
 }
 
 // Bắt buộc phải đăng nhập mới đi tiếp được
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const token = extractToken(req);
   if (!token) {
     return res.status(401).json({ error: 'Bạn cần đăng nhập để thực hiện thao tác này.' });
   }
   try {
-    req.user = loadUser(token);
+    req.user = await loadUser(token);
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.' });
@@ -49,8 +50,8 @@ function requireAuth(req, res, next) {
 }
 
 // Bắt buộc phải là admin (mọi thao tác đăng/sửa/xoá nội dung đều dùng cái này)
-function requireAdmin(req, res, next) {
-  requireAuth(req, res, () => {
+async function requireAdmin(req, res, next) {
+  await requireAuth(req, res, () => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Bạn không có quyền thực hiện thao tác này.' });
     }
@@ -59,10 +60,10 @@ function requireAdmin(req, res, next) {
 }
 
 // Không bắt buộc, nhưng nếu có token hợp lệ thì gắn req.user vào
-function optionalAuth(req, res, next) {
+async function optionalAuth(req, res, next) {
   const token = extractToken(req);
   if (token) {
-    try { req.user = loadUser(token); } catch (err) { /* token hỏng → coi như khách */ }
+    try { req.user = await loadUser(token); } catch (err) { /* token hỏng → coi như khách */ }
   }
   next();
 }

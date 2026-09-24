@@ -29,7 +29,7 @@ function toPublicNews(row) {
 
 // ---- Danh sách (có lọc theo category + phân trang) ----
 // GET /api/news?category=tin-tuc|tu-van-luat|thiet-ke-kien-truc&limit=&offset=
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { category, limit, offset } = req.query;
   const lim = Math.min(Number(limit) || 10, 50);
   const off = Number(offset) || 0;
@@ -52,26 +52,26 @@ router.get('/', (req, res) => {
   sql += ' ORDER BY news.created_at DESC LIMIT ? OFFSET ?';
   params.push(lim, off);
 
-  const rows = db.prepare(sql).all(...params);
-  const total = db.prepare(countSql).get(...countParams).total;
+  const rows = await db.all(sql, params);
+  const total = (await db.get(countSql, countParams)).total;
 
   res.json({ news: rows.map(toPublicNews), total, limit: lim, offset: off });
 });
 
 // ---- Chi tiết 1 bài ----
-router.get('/:id', (req, res) => {
-  const row = db.prepare(`
+router.get('/:id', async (req, res) => {
+  const row = await db.get(`
     SELECT news.*, users.name AS owner_name FROM news
     JOIN users ON users.id = news.user_id
     WHERE news.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!row) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
   res.json({ news: toPublicNews(row) });
 });
 
 // ---- Đăng bài mới ----
-router.post('/', requireAdmin, upload.single('image'), (req, res) => {
+router.post('/', requireAdmin, upload.single('image'), async (req, res) => {
   const { title, excerpt, content, category } = req.body;
   const bad = checkFields(req.body, { title: [200, 'Tiêu đề'], excerpt: [500, 'Tóm tắt'], content: [50000, 'Nội dung'], category: [50, 'Danh mục'] });
   if (bad) return res.status(400).json({ error: bad });
@@ -82,22 +82,22 @@ router.post('/', requireAdmin, upload.single('image'), (req, res) => {
 
   const imagePath = req.file ? `/uploads/${req.file.filename}` : null;
 
-  const info = db.prepare(`
+  const info = await db.run(`
     INSERT INTO news (user_id, title, excerpt, content, image_path, category)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(req.user.id, title.trim(), excerpt ? excerpt.trim() : null, content.trim(), imagePath, finalCategory);
+  `, [req.user.id, title.trim(), excerpt ? excerpt.trim() : null, content.trim(), imagePath, finalCategory]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT news.*, users.name AS owner_name FROM news
     JOIN users ON users.id = news.user_id WHERE news.id = ?
-  `).get(info.lastInsertRowid);
+  `, [info.lastInsertRowid]);
 
   res.status(201).json({ news: toPublicNews(row) });
 });
 
 // ---- Sửa bài ----
-router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
-  const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(req.params.id);
+router.put('/:id', requireAdmin, upload.single('image'), async (req, res) => {
+  const existing = await db.get('SELECT * FROM news WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
   const { title, excerpt, content, category } = req.body;
@@ -113,31 +113,31 @@ router.put('/:id', requireAdmin, upload.single('image'), (req, res) => {
     }
   }
 
-  db.prepare(`
+  await db.run(`
     UPDATE news SET title = ?, excerpt = ?, content = ?, image_path = ?, category = ? WHERE id = ?
-  `).run(
+  `, [
     title ? title.trim() : existing.title,
     excerpt !== undefined ? excerpt.trim() : existing.excerpt,
     content ? content.trim() : existing.content,
     imagePath,
     VALID_CATEGORIES.includes(category) ? category : existing.category,
     req.params.id
-  );
+  ]);
 
-  const row = db.prepare(`
+  const row = await db.get(`
     SELECT news.*, users.name AS owner_name FROM news
     JOIN users ON users.id = news.user_id WHERE news.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   res.json({ news: toPublicNews(row) });
 });
 
 // ---- Xoá bài ----
-router.delete('/:id', requireAdmin, (req, res) => {
-  const existing = db.prepare('SELECT * FROM news WHERE id = ?').get(req.params.id);
+router.delete('/:id', requireAdmin, async (req, res) => {
+  const existing = await db.get('SELECT * FROM news WHERE id = ?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
 
-  db.prepare('DELETE FROM news WHERE id = ?').run(req.params.id);
+  await db.run('DELETE FROM news WHERE id = ?', [req.params.id]);
 
   if (existing.image_path) {
     const filePath = path.join(__dirname, '..', 'public', existing.image_path);
