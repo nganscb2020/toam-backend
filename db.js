@@ -18,6 +18,7 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
+  charset: 'utf8mb4', // tiếng Việt + emoji (📍...) cần bộ ký tự này; mặc định của thư viện là utf8 3-byte, không lưu được emoji
   dateStrings: true // đọc cột DATETIME ra dạng chuỗi 'YYYY-MM-DD HH:MM:SS' (giống cách SQLite trả về trước đây),
                      // để không phải sửa lại lib/schema.js và lib/ssr.js vốn đang xử lý ngày giờ theo dạng chuỗi này.
 });
@@ -26,7 +27,13 @@ const pool = mysql.createPool({
 // (nơi đặt hosting có thể để múi giờ khác nhau). Toàn bộ code đọc created_at đều giả định đây là giờ UTC,
 // giống hệt cách SQLite datetime('now') vẫn luôn làm trước đây.
 // Nếu sau này thấy ngày giờ hiển thị bị lệch một số giờ cố định, đây là chỗ đầu tiên cần kiểm tra.
-pool.on('connection', (conn) => { conn.query("SET time_zone = '+00:00'").catch(() => {}); });
+pool.on('connection', (conn) => {
+  const sql = "SET time_zone = '+00:00'";
+  // Tuỳ phiên bản, đối tượng kết nối được đưa vào có thể là kiểu "callback" (có hàm .promise) hoặc kiểu promise.
+  // Xử lý cả hai để không bao giờ ném lỗi ngay lúc kết nối đầu tiên.
+  if (typeof conn.promise === 'function') conn.query(sql, () => {});
+  else conn.query(sql).catch(() => {});
+});
 
 // ---- API rút gọn, mô phỏng lại đúng 3 kiểu gọi mà code cũ (better-sqlite3) đã dùng khắp nơi ----
 // get: lấy 1 dòng (hoặc null). all: lấy nhiều dòng. run: thêm/sửa/xoá, trả về { lastInsertRowid, changes }.
@@ -56,7 +63,7 @@ async function migrate() {
       role VARCHAR(20) NOT NULL DEFAULT 'user',
       token_version INT NOT NULL DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
   // Tài khoản cũ nhất được coi là admin nếu chưa có admin nào (giữ đúng hành vi cũ).
   if (!(await get("SELECT 1 FROM users WHERE role = 'admin' LIMIT 1"))) {
@@ -74,7 +81,7 @@ async function migrate() {
       listing_type VARCHAR(20) NOT NULL,
       category VARCHAR(100) NOT NULL,
       title VARCHAR(255) NOT NULL,
-      description TEXT,
+      description MEDIUMTEXT,
       price DOUBLE NOT NULL,
       price_unit VARCHAR(10) DEFAULT 'ty',
       address VARCHAR(300) NOT NULL,
@@ -98,7 +105,7 @@ async function migrate() {
       INDEX idx_listings_user (user_id),
       INDEX idx_listings_province (province),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Bảng media (nhiều ảnh/video cho mỗi tin đăng)
@@ -112,7 +119,7 @@ async function migrate() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_media_listing (listing_id),
       FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Bảng tin tức bất động sản (dùng chung cho: Tin tức, Tư vấn luật, Thiết kế kiến trúc — phân biệt qua cột category)
@@ -129,7 +136,7 @@ async function migrate() {
       INDEX idx_news_created (created_at),
       INDEX idx_news_category (category),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Bảng dự án bất động sản
@@ -139,12 +146,12 @@ async function migrate() {
       user_id INT NOT NULL,
       name VARCHAR(255) NOT NULL,
       location VARCHAR(300),
-      description TEXT,
+      description MEDIUMTEXT,
       image_path VARCHAR(500),
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_projects_created (created_at),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
   // Bảng tin sang nhượng (cửa hàng, khách sạn, quán cafe, mặt bằng kinh doanh)
@@ -154,7 +161,7 @@ async function migrate() {
       user_id INT NOT NULL,
       category VARCHAR(100) NOT NULL,
       title VARCHAR(255) NOT NULL,
-      description TEXT,
+      description MEDIUMTEXT,
       price DOUBLE,
       price_unit VARCHAR(10) DEFAULT 'trieu',
       address VARCHAR(300) NOT NULL,
@@ -163,7 +170,7 @@ async function migrate() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_transfers_category (category),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 }
 

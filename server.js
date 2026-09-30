@@ -26,6 +26,10 @@ const ssr = require('./lib/ssr');
 const db = require('./db');
 
 const app = express();
+// Bọc mọi route đăng ký trực tiếp trên `app` (như /:section/:slug, /sitemap.xml bên dưới) để lỗi
+// bất đồng bộ không bắt được cũng không làm sập server — xem lib/asyncWrap.js để biết lý do.
+// Các route trong routes/*.js đã tự bọc riêng ở từng file, không cần lặp lại ở đây.
+require('./lib/asyncWrap').wrapRouter(app);
 const PORT = process.env.PORT || 3000;
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -121,17 +125,17 @@ const DETAIL = {
     },
     buildSchema: (row, opts) => schema.realEstateListingSchema(row, { ...opts, isRent: row.listing_type === 'rent' }),
     containerId: 'detailContainer',
-    fetchDetail: (id) => {
-      const row = db.prepare(`
+    fetchDetail: async (id) => {
+      const row = await db.get(`
         SELECT listings.*, users.name AS owner_name FROM listings
         JOIN users ON users.id = listings.user_id
         WHERE listings.id = ? AND listings.status = 'active'
-      `).get(id);
+      `, [id]);
       if (!row) return null;
-      row.media = db.prepare(`
+      row.media = await db.all(`
         SELECT media_type AS type, file_path AS path FROM listing_media
         WHERE listing_id = ? ORDER BY sort_order ASC, id ASC
-      `).all(id);
+      `, [id]);
       return row;
     },
     renderBody: (row) => ssr.renderListingBody(row, row.media),
@@ -147,11 +151,11 @@ const DETAIL = {
     breadcrumb: (row) => [row.category || 'Sang nhượng'],
     buildSchema: (row, opts) => schema.realEstateListingSchema(row, opts),
     containerId: 'detailContainer',
-    fetchDetail: (id) => db.prepare(`
+    fetchDetail: async (id) => (await db.get(`
       SELECT transfers.*, users.name AS owner_name FROM transfers
       JOIN users ON users.id = transfers.user_id
       WHERE transfers.id = ?
-    `).get(id) || null,
+    `, [id])) || null,
     renderBody: (row) => ssr.renderTransferBody(row),
     breadcrumbSpans: (row) => ({ breadcrumbTitle: ssr.esc(row.title) })
   },
@@ -162,7 +166,7 @@ const DETAIL = {
     breadcrumb: () => ['Dự án'],
     buildSchema: (row, opts) => schema.apartmentComplexSchema(row, opts),
     containerId: 'projectContainer',
-    fetchDetail: (id) => db.prepare('SELECT * FROM projects WHERE id = ?').get(id) || null,
+    fetchDetail: async (id) => (await db.get('SELECT * FROM projects WHERE id = ?', [id])) || null,
     renderBody: (row) => ssr.renderProjectBody(row),
     breadcrumbSpans: (row) => ({ breadcrumbTitle: ssr.esc(row.name) })
   },
@@ -173,20 +177,20 @@ const DETAIL = {
     breadcrumb: () => ['Tin tức'],
     buildSchema: (row, opts) => schema.articleSchema(row, { ...opts, siteName: SITE_NAME }),
     containerId: 'articleContainer',
-    fetchDetail: (id) => db.prepare(`
+    fetchDetail: async (id) => (await db.get(`
       SELECT news.*, users.name AS owner_name FROM news
       JOIN users ON users.id = news.user_id
       WHERE news.id = ?
-    `).get(id) || null,
+    `, [id])) || null,
     renderBody: (row) => ssr.renderArticleBody(row),
     breadcrumbSpans: (row) => ({ breadcrumbCategory: ssr.articleBreadcrumbCategory(row), breadcrumbTitle: ssr.esc(row.title) })
   }
 };
 const OLD_PAGES = Object.fromEntries(Object.entries(DETAIL).map(([section, d]) => ['/' + d.file, { section, ...d }]));
 
-function findDetailRow(d, id) {
+async function findDetailRow(d, id) {
   const activeClause = d.activeOnly ? "AND status = 'active'" : '';
-  return db.prepare(`SELECT * FROM ${d.table} WHERE id = ? ${activeClause}`).get(id) || null;
+  return (await db.get(`SELECT * FROM ${d.table} WHERE id = ? ${activeClause}`, [id])) || null;
 }
 
 function absoluteUrl(req, req_path) {
@@ -206,12 +210,14 @@ function imageType(imagePath) {
 }
 
 // Link cũ kiểu /listing.html?id=2 → chuyển vĩnh viễn (301) sang địa chỉ đẹp, link đã chia sẻ vẫn dùng được
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const d = OLD_PAGES[req.path];
   const id = req.query.id;
   if (req.method === 'GET' && d && typeof id === 'string' && /^\d{1,12}$/.test(id)) {
-    const row = findDetailRow(d, id);
-    if (row) return res.redirect(301, `/${d.section}/${slugPath(row[d.titleCol], id)}`);
+    try {
+      const row = await findDetailRow(d, id);
+      if (row) return res.redirect(301, `/${d.section}/${slugPath(row[d.titleCol], id)}`);
+    } catch (err) { return next(err); }
   }
   next();
 });
@@ -251,15 +257,17 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'Không tìm thấy.
 // ---- sitemap.xml: liệt kê mọi trang tĩnh + mọi tin/dự án/tin tức đang công khai, để Google thu thập dữ liệu ----
 const STATIC_PAGES = ['/', '/danh-sach-ban.html', '/danh-sach-thue.html', '/danh-sach-sang-nhuong.html', '/gioi-thieu.html'];
 
-app.get('/sitemap.xml', (req, res) => {
+app.get('/sitemap.xml', async (req, res, next) => {
   const base = absoluteUrl(req, '');
   const urls = [...STATIC_PAGES];
 
-  for (const [section, d] of Object.entries(DETAIL)) {
-    const activeClause = d.activeOnly ? "WHERE status = 'active'" : '';
-    const rows = db.prepare(`SELECT id, ${d.titleCol} AS t FROM ${d.table} ${activeClause}`).all();
-    for (const row of rows) urls.push(`/${section}/${slugPath(row.t, row.id)}`);
-  }
+  try {
+    for (const [section, d] of Object.entries(DETAIL)) {
+      const activeClause = d.activeOnly ? "WHERE status = 'active'" : '';
+      const rows = await db.all(`SELECT id, ${d.titleCol} AS t FROM ${d.table} ${activeClause}`);
+      for (const row of rows) urls.push(`/${section}/${slugPath(row.t, row.id)}`);
+    }
+  } catch (err) { return next(err); }
 
   const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.map(u => `  <url><loc>${base}${u}</loc></url>`).join('\n') +
@@ -275,14 +283,15 @@ app.get('/robots.txt', (req, res) => {
 });
 
 // Trang chi tiết với địa chỉ đẹp: cùng một file HTML, trang tự đọc mã tin ở cuối địa chỉ
-app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, next) => {
+app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', async (req, res, next) => {
   const d = DETAIL[req.params.section];
   const m = /^(?:.*-)?(\d{1,12})$/.exec(req.params.slug);
   if (!d || !m) return next();
 
   const id = m[1];
   const page = path.join(__dirname, 'public', d.file);
-  const row = d.fetchDetail(id);
+  let row;
+  try { row = await d.fetchDetail(id); } catch (err) { return next(err); }
   if (!row) return res.status(404).sendFile(page); // không có tin này (hoặc đang ẩn) → trang tự báo "không tìm thấy"
 
   const title = row[d.titleCol];
@@ -295,6 +304,7 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
   // chạy xong mới có nội dung.
   fs.readFile(page, 'utf8', (err, html) => {
     if (err) return next(err);
+    try {
     const image = absoluteImage(req, row.image_path, d.fallbackImage);
     const url = absoluteUrl(req, `/${req.params.section}/${canonical}`); // URL chuẩn, không kèm query string vãng lai
 
@@ -325,6 +335,9 @@ app.get('/:section(bat-dong-san|sang-nhuong|du-an|tin-tuc)/:slug', (req, res, ne
     }
 
     res.set('Content-Type', 'text/html; charset=utf-8').send(html2);
+    } catch (buildErr) {
+      next(buildErr); // lỗi khi dựng trang -> trả lỗi 500 gọn gàng, KHÔNG làm sập server
+    }
   });
 });
 
@@ -357,6 +370,22 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.' });
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Server đang chạy tại http://localhost:${PORT}`);
-});
+// Lưới an toàn cuối cùng: 1 lỗi không ai bắt (ví dụ MySQL chập chờn đúng lúc) chỉ được ghi log,
+// không được làm cả website ngừng hoạt động. Lỗi khởi động (thiếu biến môi trường, không nối được MySQL)
+// vẫn tự dừng đúng như thiết kế vì đã được db.js xử lý riêng bằng process.exit(1).
+process.on('unhandledRejection', (reason) => console.error('⚠️ Lỗi bất đồng bộ chưa được xử lý:', reason));
+process.on('uncaughtException', (err) => console.error('⚠️ Lỗi chưa được bắt:', err));
+
+// Đợi kết nối MySQL thành công và dựng xong bảng (db.js) rồi mới nhận request — tránh trường hợp
+// có người mở trang đúng lúc server chưa kết nối được database, gặp lỗi khó hiểu.
+db.ready()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`✅ Server đang chạy tại http://localhost:${PORT}`);
+    });
+  })
+  .catch(() => {
+    // db.js đã tự in lỗi chi tiết và process.exit(1) khi kết nối/dựng bảng thất bại;
+    // nhánh này gần như không bao giờ chạy tới, chỉ để phòng hờ.
+    console.error('❌ Không khởi động được server vì lỗi cơ sở dữ liệu.');
+  });

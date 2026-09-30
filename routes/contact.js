@@ -2,7 +2,8 @@ const express = require('express');
 const nodemailer = require('nodemailer');
 const { checkFields } = require('../lib/validate');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 
 const CONTACT_EMAIL = process.env.CONTACT_EMAIL || 'nganscb2020@gmail.com';
 

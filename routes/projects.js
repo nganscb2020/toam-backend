@@ -4,9 +4,10 @@ const fs = require('fs');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { create: createUpload } = require('../middleware/upload');
-const { checkFields, checkNumbers, idParam } = require('../lib/validate');
+const { checkFields, checkNumbers, idParam, pageParams } = require('../lib/validate');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 
 const upload = createUpload({ prefix: 'project', maxFileSize: 5 * 1024 * 1024 });
 
@@ -27,8 +28,7 @@ function toPublicProject(row) {
 // ---- Danh sách dự án (phân trang) ----
 router.get('/', async (req, res) => {
   const { limit, offset } = req.query;
-  const lim = Math.min(Number(limit) || 10, 50);
-  const off = Number(offset) || 0;
+  const { lim, off } = pageParams(limit, offset, 10, 50);
 
   const rows = await db.all(`
     SELECT projects.*, users.name AS owner_name FROM projects

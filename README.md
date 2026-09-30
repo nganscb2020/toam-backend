@@ -17,8 +17,8 @@ quản trị riêng, không xuất hiện trên menu công khai.
 ## Công nghệ dùng
 
 - Node.js + Express — máy chủ và API
-- SQLite (better-sqlite3) — cơ sở dữ liệu, lưu thành 1 file, không cần cài
-  đặt server database riêng
+- MySQL (thư viện `mysql2`) — cơ sở dữ liệu. Cần một database MySQL riêng
+  (Hostinger cấp sẵn trong hPanel); ứng dụng tự tạo các bảng khi khởi động
 - JWT + bcrypt — xác thực người dùng
 - Multer — nhận ảnh tải lên, lưu vào `public/uploads`
 
@@ -26,16 +26,22 @@ quản trị riêng, không xuất hiện trên menu công khai.
 
 ```bash
 npm install
-cp .env.example .env      # rồi mở .env, đổi JWT_SECRET và ADMIN_SETUP_KEY
+cp .env.example .env      # rồi mở .env, điền JWT_SECRET, ADMIN_SETUP_KEY và 5 biến DB_*
 npm start
 ```
+
+Cần Node.js **20 trở lên** và một database MySQL đang chạy (tự cài MySQL/XAMPP trên
+máy, hoặc dùng luôn database Hostinger nếu đã bật "Remote MySQL" cho IP của bạn).
+Thiếu bất kỳ biến `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` nào, server sẽ
+cố ý không khởi động và báo rõ biến nào đang thiếu.
 
 Mở `http://localhost:3000` để xem trang chủ. Mở
 `http://localhost:3000/admin.html` để tạo tài khoản admin lần đầu (cần đúng
 `ADMIN_SETUP_KEY` bạn vừa đặt trong `.env`) và bắt đầu đăng tin.
 
-Database sẽ tự tạo tại `data/toam.db` trong lần chạy đầu tiên — không cần
-thao tác gì thêm.
+Các bảng (`users`, `listings`, `listing_media`, `news`, `projects`, `transfers`)
+sẽ tự được tạo trong database MySQL ở lần chạy đầu tiên — bạn chỉ cần tạo sẵn
+một database trống, không cần chạy lệnh SQL nào.
 
 ### Về việc tạo tài khoản admin
 
@@ -74,45 +80,30 @@ Nếu chưa kịp thiết lập SMTP, form vẫn hoạt động bình thường 
 thân thiện cho khách ("Hệ thống gửi email chưa được cấu hình") thay vì làm
 sập trang — không có gì bị lỗi nghiêm trọng, chỉ là mail chưa gửi đi được.
 
-## Đưa lên hosting (miễn phí, không cần server riêng)
+## Đưa lên Hostinger (gói Business)
 
-Dự án này có 1 điểm cần lưu ý khi chọn hosting: nó **ghi vào ổ đĩa** (file
-database SQLite và ảnh tải lên), nên không dùng được các host chỉ phục vụ
-file tĩnh như Netlify/Vercel (dành cho trang không có backend). Bạn cần một
-host chạy được Node.js liên tục. Gợi ý: **Render** (có gói miễn phí, dễ dùng
-nhất cho người mới).
+Dự án cần một host chạy được **Node.js liên tục** và có **MySQL**. Gói Business của
+Hostinger có cả hai (ứng dụng Node.js triển khai qua GitHub hoặc tải ZIP; MySQL tạo
+trong hPanel). Tên các mục trong hPanel có thể khác đôi chút tuỳ giao diện mới nhất.
 
-### Các bước trên Render
+1. **Tạo database:** hPanel → Databases → MySQL Databases → tạo database + người dùng +
+   mật khẩu. Ghi lại 4 thông tin: tên database, tên người dùng, mật khẩu, host
+   (thường là `localhost` khi ứng dụng và database cùng nằm trên Hostinger).
+2. **Tạo ứng dụng Node.js:** kết nối repository GitHub, chọn nhánh `main`, chọn
+   **Node 20 trở lên**. Hostinger sẽ chạy `npm install` rồi `npm start`.
+3. **Điền biến môi trường** của ứng dụng (xem `.env.example`):
+   `NODE_ENV=production`, `JWT_SECRET`, `ADMIN_SETUP_KEY`, `DB_HOST`, `DB_PORT`,
+   `DB_USER`, `DB_PASSWORD`, `DB_NAME`, và `SMTP_*` nếu dùng form liên hệ.
+   Không tải file `.env` lên GitHub.
+4. **Bật HTTPS** cho tên miền (bắt buộc — đăng nhập dùng cookie chỉ chạy qua HTTPS).
+5. Mở `https://tên-miền/admin.html` → "Tạo tài khoản lần đầu" để tạo admin, rồi đăng tin.
 
-1. Đưa toàn bộ thư mục này lên một repository GitHub (không đẩy `node_modules`
-   và `.env` lên — đã có `.gitignore` lo việc này).
-2. Vào [render.com](https://render.com), tạo tài khoản, chọn **New → Web
-   Service**, kết nối với repository vừa tạo.
-3. Điền cấu hình:
-   - Build Command: `npm install`
-   - Start Command: `npm start`
-4. Vào mục **Environment**, thêm biến `JWT_SECRET` với một chuỗi bí mật dài,
-   ngẫu nhiên (đừng dùng giá trị mẫu trong `.env.example`).
-5. Bấm **Create Web Service**. Sau 1–2 phút, Render cấp cho bạn một địa chỉ
-   dạng `https://ten-du-an.onrender.com` — trang đã chạy thật, đăng tin được
-   ngay.
-
-> Lưu ý về gói miễn phí của Render: ổ đĩa sẽ **không lưu vĩnh viễn** — nếu
-> service khởi động lại, file `data/toam.db` và ảnh trong `public/uploads`
-> có thể bị mất. Với sản phẩm thật, hãy nâng cấp lên gói có "Persistent Disk"
-> (khoảng 7 USD/tháng) hoặc chuyển sang một database ngoài (xem phần dưới).
-
-### Gắn tên miền riêng
-
-Sau khi service chạy ổn định trên Render, vào mục **Settings → Custom
-Domain**, thêm tên miền bạn đã mua (ví dụ từ Mắt Bão, PA Vietnam, Namecheap),
-rồi làm theo hướng dẫn trỏ bản ghi DNS mà Render đưa ra.
+> Cần hỏi bộ phận hỗ trợ Hostinger: thư mục `public/uploads` (ảnh tải lên) có được giữ
+> lại vĩnh viễn khi ứng dụng khởi động lại/triển khai lại không. Dữ liệu tin đăng nằm
+> trong MySQL nên an toàn, nhưng file ảnh vẫn nằm trên ổ đĩa của ứng dụng.
 
 ## Khi cần mở rộng thêm
 
-- **Chuyển sang PostgreSQL**: khi lượng tin đăng lớn hoặc cần dữ liệu không
-  bị mất khi restart, đổi `better-sqlite3` sang một dịch vụ Postgres có sẵn
-  (Render Postgres, Supabase, Railway) và sửa lại `db.js`.
 - **Lưu ảnh trên dịch vụ ngoài**: dùng Cloudinary hoặc AWS S3 thay vì lưu
   ảnh trực tiếp trên ổ đĩa server, để ảnh không bị mất khi service khởi
   động lại.
@@ -125,12 +116,12 @@ rồi làm theo hướng dẫn trỏ bản ghi DNS mà Render đưa ra.
 ```
 toam-backend/
 ├── server.js              # Điểm khởi động, ghép các route + phục vụ frontend
-├── db.js                  # Khởi tạo SQLite, tạo bảng users & listings
+├── db.js                  # Kết nối MySQL, tự tạo 6 bảng khi khởi động
 ├── middleware/auth.js      # Kiểm tra JWT
-├── routes/auth.js         # Đăng ký / đăng nhập / thông tin tài khoản
-├── routes/listings.js     # CRUD tin đăng + upload ảnh
+├── routes/                # auth, listings, news, projects, transfers, contact, media
 ├── public/index.html      # Trang chủ công khai (chỉ xem, không đăng tin được)
 ├── public/admin.html      # Trang quản trị (đăng nhập + đăng/sửa/xoá tin)
 ├── public/uploads/        # Ảnh người dùng tải lên (tự tạo khi chạy)
-└── data/toam.db           # File database (tự tạo khi chạy)
+├── lib/                   # Hàm dùng chung: kiểm tra dữ liệu, SEO, dựng sẵn nội dung, bắt lỗi async...
+└── .env                   # Biến môi trường (tự tạo từ .env.example, KHÔNG đưa lên GitHub)
 ```

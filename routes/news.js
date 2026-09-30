@@ -4,9 +4,10 @@ const fs = require('fs');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { create: createUpload } = require('../middleware/upload');
-const { checkFields, checkNumbers, idParam } = require('../lib/validate');
+const { checkFields, checkNumbers, idParam, pageParams } = require('../lib/validate');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 
 const VALID_CATEGORIES = ['tin-tuc', 'tu-van-luat', 'thiet-ke-kien-truc'];
 
@@ -31,8 +32,7 @@ function toPublicNews(row) {
 // GET /api/news?category=tin-tuc|tu-van-luat|thiet-ke-kien-truc&limit=&offset=
 router.get('/', async (req, res) => {
   const { category, limit, offset } = req.query;
-  const lim = Math.min(Number(limit) || 10, 50);
-  const off = Number(offset) || 0;
+  const { lim, off } = pageParams(limit, offset, 10, 50);
 
   let sql = `
     SELECT news.*, users.name AS owner_name FROM news

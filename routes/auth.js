@@ -6,7 +6,8 @@ const db = require('../db');
 const { requireAuth, loadUser, extractToken, JWT_SECRET, JWT_EXPIRES } = require('../middleware/auth');
 const { setSessionCookie, clearSessionCookie } = require('../lib/cookies');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 const BCRYPT_COST = 12;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

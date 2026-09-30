@@ -4,9 +4,10 @@ const fs = require('fs');
 const db = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 const { create: createUpload } = require('../middleware/upload');
-const { checkFields, checkNumbers, idParam } = require('../lib/validate');
+const { checkFields, checkNumbers, idParam, pageParams } = require('../lib/validate');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 
 const upload = createUpload({ prefix: 'transfer', maxFileSize: 5 * 1024 * 1024 });
 
@@ -31,8 +32,7 @@ function toPublicTransfer(row) {
 // ---- Danh sách (lọc theo category + phân trang) ----
 router.get('/', async (req, res) => {
   const { category, limit, offset } = req.query;
-  const lim = Math.min(Number(limit) || 10, 50);
-  const off = Number(offset) || 0;
+  const { lim, off } = pageParams(limit, offset, 10, 50);
 
   let sql = `
     SELECT transfers.*, users.name AS owner_name FROM transfers

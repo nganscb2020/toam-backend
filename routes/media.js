@@ -4,7 +4,8 @@ const express = require('express');
 const { requireAdmin } = require('../middleware/auth');
 const { create: createUpload } = require('../middleware/upload');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 const upload = createUpload({ prefix: 'content', maxFileSize: 5 * 1024 * 1024 });
 
 router.post('/upload', requireAdmin, upload.single('file'), (req, res) => {

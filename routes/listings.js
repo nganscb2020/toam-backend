@@ -4,9 +4,10 @@ const fs = require('fs');
 const db = require('../db');
 const { requireAdmin, optionalAuth } = require('../middleware/auth');
 const { create: createUpload } = require('../middleware/upload');
-const { checkFields, checkNumbers, idParam } = require('../lib/validate');
+const { checkFields, checkNumbers, idParam, pageParams } = require('../lib/validate');
 
-const router = express.Router();
+const { wrapRouter } = require('../lib/asyncWrap');
+const router = wrapRouter(express.Router());
 
 // ---- Cấu hình tải ảnh/video lên (kiểm tra nội dung thật của file, xem middleware/upload.js) ----
 const upload = createUpload({ prefix: 'listing', allowVideo: true, maxFileSize: 50 * 1024 * 1024 });
@@ -155,8 +156,7 @@ router.get('/', optionalAuth, async (req, res) => {
   const countParams = params.slice(); // bản sao trước khi thêm limit/offset
   sql += ' ORDER BY listings.created_at DESC';
 
-  const lim = Math.min(Number(limit) || 20, 100);
-  const off = Number(offset) || 0;
+  const { lim, off } = pageParams(limit, offset, 20, 100);
   sql += ' LIMIT ? OFFSET ?';
   params.push(lim, off);
 
