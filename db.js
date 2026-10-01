@@ -3,8 +3,12 @@
 // đúng tên biến mà Hostinger dùng trong hướng dẫn "Connecting a MySQL database to a Node.js app".
 const mysql = require('mysql2/promise');
 
-const REQUIRED = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+// DB_PASSWORD được phép để TRỐNG (ví dụ user "root" mặc định của XAMPP khi chạy thử trên máy không đặt
+// mật khẩu) — nên chỉ coi là "thiếu" khi dòng đó không hề có trong .env (undefined), khác với "có dòng
+// nhưng để trống" (chuỗi rỗng ''). Các biến còn lại thì để trống là vô nghĩa nên vẫn bắt buộc có giá trị thật.
+const REQUIRED = ['DB_HOST', 'DB_USER', 'DB_NAME'];
 const missing = REQUIRED.filter((k) => !process.env[k]);
+if (process.env.DB_PASSWORD === undefined) missing.push('DB_PASSWORD');
 if (missing.length) {
   console.error(`❌ Thiếu biến môi trường cơ sở dữ liệu: ${missing.join(', ')}. Xem .env.example.`);
   process.exit(1);
