@@ -1,0 +1,5 @@
+
+> toam-backend@1.0.0 start
+> node server.js
+
+❌ Không kết nối được hoặc không dựng được bảng trong MySQL: 

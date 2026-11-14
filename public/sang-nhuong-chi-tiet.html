@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sang nhượng — BDSCHÍNHCHỦHCM</title>
+<title>Sang nhượng — TRANHOANG LAND</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -35,7 +35,9 @@
   .logo{ display:flex; align-items:center; gap:12px; }
   .logo .mark{ width:52px; height:52px; border-radius:8px; background: var(--red); display:flex; align-items:center; justify-content:center; }
   .logo .mark svg{ width:28px; height:28px; }
-  .logo .text .l1{ font-size:1.05rem; font-weight:800; color: var(--red); line-height:1.15; letter-spacing:-0.02em; }
+  .logo .text .l1{ font-size:1.45rem; font-weight:800; color: var(--red); line-height:1.1; letter-spacing:0.01em; white-space:nowrap; }
+  @media (max-width: 620px){ .logo .text .l1{ font-size:1.2rem; } }
+  @media (max-width: 380px){ .logo .text .l1{ font-size:1.05rem; } }
   .logo .text .l2{ font-size:0.8rem; color: var(--ink-soft); }
   .promo-banner{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; }
   .promo-banner .tag{ color: var(--ink); }
@@ -150,7 +152,7 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 11L12 3l9 8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h5v-6h4v6h5V10" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div class="text">
-        <div class="l1">BDSCHÍNHCHỦHCM</div>
+        <div class="l1">TRANHOANG LAND</div>
         <div class="l2">Mua bán &amp; cho thuê nhà đất</div>
       </div>
     </a>
@@ -249,12 +251,12 @@
         <h4>Liên hệ</h4>
         <ul>
           <li>📞 093 856 0857</li>
-          <li>✉️ info@bdschinhchuhcm.vn</li>
+          <li>✉️ info@tranhoangland.vn</li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <b>© 2026 BDSCHÍNHCHỦHCM.</b> Bảo lưu mọi quyền. &nbsp;|&nbsp; Hotline: <b>093 856 0857</b> &nbsp;|&nbsp; Email: info@bdschinhchuhcm.vn
+      <b>© 2026 TRANHOANG LAND.</b> Bảo lưu mọi quyền. &nbsp;|&nbsp; Hotline: <b>093 856 0857</b> &nbsp;|&nbsp; Email: info@tranhoangland.vn
     </div>
   </div>
 </footer>
@@ -293,7 +295,7 @@
       if (!res.ok){ renderNotFound(); return; }
       const data = await res.json();
       const t = data.transfer;
-      document.title = `${esc(t.title)} — BDSCHÍNHCHỦHCM`;
+      document.title = `${esc(t.title)} — TRANHOANG LAND`;
       document.getElementById('breadcrumbTitle').textContent = t.title;
 
       if (!document.getElementById('detailContainer').dataset.ssr)
@@ -321,7 +323,7 @@
           <aside>
             <div class="contact-box">
               <h3>Liên hệ tư vấn</h3>
-              <div class="owner">Người đăng: <b>${esc(t.ownerName || 'BDSCHÍNHCHỦHCM')}</b></div>
+              <div class="owner">Người đăng: <b>${esc(t.ownerName || 'TRANHOANG LAND')}</b></div>
               <a href="tel:0938560857" class="btn-call">📞 Gọi hotline: 093 856 0857</a>
             </div>
             <div class="side-box">
