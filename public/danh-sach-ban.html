@@ -41,6 +41,11 @@
   .promo-banner{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:1.05rem; }
   .promo-banner .tag{ color: var(--ink); }
   .promo-banner .big{ color: var(--red-bright); font-size:1.6rem; }
+  @media (max-width: 620px){
+    .header-row{ flex-wrap:wrap; gap:10px 14px; }
+    .promo-banner{ order:3; width:100%; font-size:0.9rem; flex-wrap:wrap; }
+    .promo-banner .big{ font-size:1.25rem; }
+  }
 
   nav.main-nav{ background: var(--red); }
   nav.main-nav ul{ display:flex; max-width:1240px; margin:0 auto; }
